@@ -3,30 +3,31 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Studio</title>
+    <title>AI Content Studio</title>
     <script src="https://unpkg.com/@vkontakte/vk-bridge/dist/index.umd.js"></script>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, sans-serif; }
         body { background-color: #0f0f12; color: #ffffff; display: flex; justify-content: center; padding: 16px; min-height: 100vh; }
         .container { width: 100%; max-width: 480px; display: flex; flex-direction: column; gap: 16px; }
-        .header { text-align: center; padding: 12px 0; }
+        .header { text-align: center; padding: 8px 0; }
         .header h1 { font-size: 24px; font-weight: 700; background: linear-gradient(135deg, #0084ff, #a855f7); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
         .header p { font-size: 13px; color: #8e8e93; margin-top: 4px; }
         
-        .mode-selector { display: flex; background: #1c1c1e; border-radius: 12px; padding: 4px; gap: 4px; }
-        .mode-btn { flex: 1; padding: 12px; border: none; background: transparent; color: #8e8e93; font-weight: 600; font-size: 14px; border-radius: 8px; cursor: pointer; transition: all 0.2s; }
-        .mode-btn.active { background: #2c2c2e; color: #ffffff; box-shadow: 0 2px 8px rgba(0,0,0,0.4); }
+        .section-label { font-size: 12px; color: #8e8e93; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+
+        .mode-selector, .ratio-selector { display: flex; background: #1c1c1e; border-radius: 12px; padding: 4px; gap: 4px; }
+        .mode-btn, .ratio-btn { flex: 1; padding: 10px; border: none; background: transparent; color: #8e8e93; font-weight: 600; font-size: 13px; border-radius: 8px; cursor: pointer; transition: all 0.2s; }
+        .mode-btn.active, .ratio-btn.active { background: #2c2c2e; color: #ffffff; box-shadow: 0 2px 8px rgba(0,0,0,0.4); }
 
         .input-group { display: flex; flex-direction: column; gap: 8px; }
-        label { font-size: 13px; color: #aaa; font-weight: 500; }
-        textarea { width: 100%; height: 100px; background: #1c1c1e; border: 1px solid #2c2c2e; border-radius: 12px; color: #fff; padding: 12px; font-size: 14px; resize: none; outline: none; }
+        textarea { width: 100%; height: 90px; background: #1c1c1e; border: 1px solid #2c2c2e; border-radius: 12px; color: #fff; padding: 12px; font-size: 14px; resize: none; outline: none; }
         textarea:focus { border-color: #0084ff; }
 
         .btn-generate { width: 100%; padding: 15px; border: none; border-radius: 12px; background: linear-gradient(135deg, #0084ff, #8a2be2); color: white; font-size: 16px; font-weight: 600; cursor: pointer; }
         .btn-generate:disabled { opacity: 0.5; cursor: not-allowed; }
 
         .result-box { background: #1c1c1e; border-radius: 12px; padding: 12px; min-height: 220px; display: flex; flex-direction: column; align-items: center; justify-content: center; border: 1px dashed #2c2c2e; }
-        .result-box img, .result-box video { width: 100%; border-radius: 8px; }
+        .result-box img, .result-box video { width: 100%; border-radius: 8px; max-height: 500px; object-fit: contain; }
 
         .loader { display: none; flex-direction: column; align-items: center; gap: 12px; color: #8e8e93; font-size: 14px; text-align: center; }
         .spinner { width: 36px; height: 36px; border: 3px solid rgba(255,255,255,0.1); border-top: 3px solid #0084ff; border-radius: 50%; animation: spin 1s linear infinite; }
@@ -40,13 +41,29 @@
             <p>Генерация фото и видео по тексту</p>
         </div>
 
-        <div class="mode-selector">
-            <button class="mode-btn active" id="btn-photo">🖼️ Фото</button>
-            <button class="mode-btn" id="btn-video">🎬 Видео</button>
+        <!-- Выбор Режима -->
+        <div class="input-group">
+            <span class="section-label">Режим генерации</span>
+            <div class="mode-selector">
+                <button class="mode-btn active" id="btn-photo">🖼️ Фото</button>
+                <button class="mode-btn" id="btn-video">🎬 Видео</button>
+            </div>
         </div>
 
+        <!-- Выбор Формата (Aspect Ratio) -->
         <div class="input-group">
-            <label for="prompt">Описание сцены:</label>
+            <span class="section-label">Формат кадра</span>
+            <div class="ratio-selector">
+                <button class="ratio-btn active" onclick="setRatio('16:9')">16:9 (YouTube)</button>
+                <button class="ratio-btn" onclick="setRatio('9:16')">9:16 (Reels/VK)</button>
+                <button class="ratio-btn" onclick="setRatio('1:1')">1:1 (Квадрат)</button>
+                <button class="ratio-btn" onclick="setRatio('3:4')">3:4 (Портрет)</button>
+            </div>
+        </div>
+
+        <!-- Промпт -->
+        <div class="input-group">
+            <span class="section-label">Описание сцены</span>
             <textarea id="prompt" placeholder="Опишите желаемый кадр..."></textarea>
         </div>
 
@@ -58,7 +75,7 @@
                 <div class="spinner"></div>
                 <span id="loader-text">Генерируем...</span>
             </div>
-            <div id="content-container" style="width: 100%;"></div>
+            <div id="content-container" style="width: 100%; display: flex; justify-content: center;"></div>
         </div>
     </div>
 
@@ -67,6 +84,7 @@
 
         const BACKEND_URL = "https://photo-suit-backend.onrender.com";
         let currentMode = "photo";
+        let currentRatio = "16:9";
 
         const btnPhoto = document.getElementById("btn-photo");
         const btnVideo = document.getElementById("btn-video");
@@ -77,19 +95,23 @@
         const placeholder = document.getElementById("placeholder");
         const container = document.getElementById("content-container");
 
-        // Переключение режимов через жесткие события click
+        function setRatio(ratio) {
+            currentRatio = ratio;
+            document.querySelectorAll('.ratio-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.innerText.includes(ratio));
+            });
+        }
+
         btnPhoto.addEventListener("click", () => {
             currentMode = "photo";
             btnPhoto.classList.add("active");
             btnVideo.classList.remove("active");
-            promptInput.placeholder = "Например: Futuristic neon city street at night, 8k photo...";
         });
 
         btnVideo.addEventListener("click", () => {
             currentMode = "video";
             btnVideo.classList.add("active");
             btnPhoto.classList.remove("active");
-            promptInput.placeholder = "Например: Cinematic footage of a red sports car driving fast on a highway...";
         });
 
         generateBtn.addEventListener("click", async () => {
@@ -99,20 +121,18 @@
                 return;
             }
 
-            // Блокируем UI
             generateBtn.disabled = true;
             placeholder.style.display = "none";
             container.innerHTML = "";
             loader.style.display = "flex";
             
             loaderText.innerText = currentMode === "video" 
-                ? "Генерация видео обычно занимает ~1-2 минуты. Пожалуйста, подождите..." 
-                : "Генерируем фото (~5 секунд)...";
+                ? "Генерация видео (~1-2 минуты)..." 
+                : "Генерируем фото...";
 
             try {
-                // Асинхронный запрос с таймаутом
                 const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 180000); // 3 мин таймаут
+                const timeoutId = setTimeout(() => controller.abort(), 180000);
 
                 const response = await fetch(`${BACKEND_URL}/api/generate`, {
                     method: "POST",
@@ -120,7 +140,8 @@
                     signal: controller.signal,
                     body: JSON.stringify({
                         prompt: text,
-                        mode: currentMode
+                        mode: currentMode,
+                        aspect_ratio: currentRatio
                     })
                 });
 
@@ -137,15 +158,11 @@
                             </video>`;
                     }
                 } else {
-                    alert("Ошибка: " + (data.error || "Сервер вернул пустой ответ"));
+                    alert("Ошибка: " + (data.error || "Пустой ответ от сервера"));
                     placeholder.style.display = "block";
                 }
             } catch (err) {
-                if (err.name === 'AbortError') {
-                    alert("Превышено время ожидания. Сервер долго генерировал видео.");
-                } else {
-                    alert("Ошибка подключения к бэкенду. Проверьте сеть.");
-                }
+                alert("Ошибка сети или таймаут генерации.");
                 placeholder.style.display = "block";
             } finally {
                 loader.style.display = "none";
