@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Фото на документы + ИИ Костюм</title>
+  <style>
+    body { font-family: sans-serif; background: #f5f5f5; margin: 0; padding: 20px; text-align: center; }
+    .card { background: white; max-width: 450px; margin: 0 auto; padding: 20px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+    input[type="file"] { margin: 15px 0; }
+    button { background: #0077ff; color: white; border: none; padding: 12px 20px; border-radius: 8px; font-size: 16px; cursor: pointer; width: 100%; margin-top: 10px; }
+    button:disabled { background: #ccc; }
+    #preview { max-width: 100%; border-radius: 8px; margin-top: 15px; display: none; }
+    .status { margin-top: 15px; font-weight: bold; color: #555; }
+  </style>
+</head>
+<body>
+
+<div class="card">
+  <h2>📸 Фото на документы</h2>
+  <p>Загрузи фото и примерь деловой костюм с помощью ИИ</p>
+  
+  <input type="file" id="upload" accept="image/*">
+  <br>
+  <img id="preview" alt="Предпросмотр">
+  
+  <button id="processBtn" disabled>👔 Одеть в костюм (ИИ)</button>
+  <div id="status" class="status"></div>
+</div>
+
+<script>
+  // СЮДА ВСТАВЛЯЕМ ССЫЛКУ ИЗ RENDER
+  const BACKEND_URL = "https://ТВОЯ_ССЫЛКА_С_RENDER/api/process-photo";
+
+  const uploadInput = document.getElementById('upload');
+  const previewImg = document.getElementById('preview');
+  const processBtn = document.getElementById('processBtn');
+  const statusDiv = document.getElementById('status');
+
+  let base64Image = "";
+
+  uploadInput.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        base64Image = event.target.result;
+        previewImg.src = base64Image;
+        previewImg.style.display = "block";
+        processBtn.disabled = false;
+        statusDiv.innerText = "";
+      };
+      reader.readAsDataURL(file);
+    }
+  });
+
+  processBtn.addEventListener('click', async () => {
+    if (!base64Image) return;
+
+    processBtn.disabled = true;
+    statusDiv.innerText = "⏳ Нейросеть генерирует костюм... (около 15-20 сек)";
+
+    try {
+      const response = await fetch(BACKEND_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ image: base64Image })
+      });
+
+      const data = await response.json();
+
+      if (data.status === "success" && data.output_url) {
+        previewImg.src = data.output_url;
+        statusDiv.innerText = "✅ Готово!";
+      } else {
+        statusDiv.innerText = "❌ Ошибка: " + (data.error || "Не удалось обработать");
+      }
+    } catch (err) {
+      statusDiv.innerText = "❌ Ошибка сети или бэкенда";
+      console.error(err);
+    } finally {
+      processBtn.disabled = false;
+    }
+  });
+</script>
+
+</body>
+</html>
