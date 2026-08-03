@@ -1,88 +1,287 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Фото на документы + ИИ Костюм</title>
-  <style>
-    body { font-family: sans-serif; background: #f5f5f5; margin: 0; padding: 20px; text-align: center; }
-    .card { background: white; max-width: 450px; margin: 0 auto; padding: 20px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
-    input[type="file"] { margin: 15px 0; }
-    button { background: #0077ff; color: white; border: none; padding: 12px 20px; border-radius: 8px; font-size: 16px; cursor: pointer; width: 100%; margin-top: 10px; }
-    button:disabled { background: #ccc; }
-    #preview { max-width: 100%; border-radius: 8px; margin-top: 15px; display: none; }
-    .status { margin-top: 15px; font-weight: bold; color: #555; }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Photo & Video Generator</title>
+    <script src="https://unpkg.com/@vkontakte/vk-bridge/dist/index.umd.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        body {
+            background-color: #0f0f12;
+            color: #ffffff;
+            display: flex;
+            justify-content: center;
+            padding: 16px;
+            min-height: 100vh;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 480px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .header {
+            text-align: center;
+            padding: 12px 0;
+        }
+
+        .header h1 {
+            font-size: 22px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #0084ff, #a855f7);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .header p {
+            font-size: 13px;
+            color: #8e8e93;
+            margin-top: 4px;
+        }
+
+        .mode-selector {
+            display: flex;
+            background: #1c1c1e;
+            border-radius: 12px;
+            padding: 4px;
+            gap: 4px;
+        }
+
+        .mode-btn {
+            flex: 1;
+            padding: 10px;
+            border: none;
+            background: transparent;
+            color: #8e8e93;
+            font-weight: 600;
+            font-size: 14px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .mode-btn.active {
+            background: #2c2c2e;
+            color: #ffffff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        label {
+            font-size: 13px;
+            color: #aaa;
+            font-weight: 500;
+        }
+
+        textarea {
+            width: 100%;
+            height: 110px;
+            background: #1c1c1e;
+            border: 1px solid #2c2c2e;
+            border-radius: 12px;
+            color: #fff;
+            padding: 12px;
+            font-size: 14px;
+            resize: none;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        textarea:focus {
+            border-color: #0084ff;
+        }
+
+        .btn-generate {
+            width: 100%;
+            padding: 14px;
+            border: none;
+            border-radius: 12px;
+            background: linear-gradient(135deg, #0084ff, #8a2be2);
+            color: white;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(0, 132, 255, 0.3);
+            transition: transform 0.1s, opacity 0.2s;
+        }
+
+        .btn-generate:active {
+            transform: scale(0.98);
+        }
+
+        .btn-generate:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .result-box {
+            background: #1c1c1e;
+            border-radius: 12px;
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 200px;
+            border: 1px dashed #2c2c2e;
+        }
+
+        .result-box img, .result-box video {
+            width: 100%;
+            border-radius: 8px;
+            object-fit: cover;
+        }
+
+        .loader {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+            color: #8e8e93;
+            font-size: 14px;
+        }
+
+        .spinner {
+            width: 36px;
+            height: 36px;
+            border: 3px solid rgba(255,255,255,0.1);
+            border-top: 3px solid #0084ff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .status-msg {
+            font-size: 13px;
+            color: #8e8e93;
+            text-align: center;
+        }
+    </style>
 </head>
 <body>
+    <div class="container">
+        <div class="header">
+            <h1>AI Studio</h1>
+            <p>Генерация фото и видео по текстовому описанию</p>
+        </div>
 
-<div class="card">
-  <h2>📸 Фото на документы</h2>
-  <p>Загрузи фото и примерь деловой костюм с помощью ИИ</p>
-  
-  <input type="file" id="upload" accept="image/*">
-  <br>
-  <img id="preview" alt="Предпросмотр">
-  
-  <button id="processBtn" disabled>👔 Одеть в костюм (ИИ)</button>
-  <div id="status" class="status"></div>
-</div>
+        <div class="mode-selector">
+            <button class="mode-btn active" id="btn-photo" onclick="setMode('photo')">🖼️ Фото</button>
+            <button class="mode-btn" id="btn-video" onclick="setMode('video')">🎬 Видео</button>
+        </div>
 
-<script>
-  // СЮДА ВСТАВЛЯЕМ ССЫЛКУ ИЗ RENDER
-  const BACKEND_URL = "https://photo-suit-backend.onrender.com/api/process-photo";
+        <div class="input-group">
+            <label for="prompt">Что сгенерировать?</label>
+            <textarea id="prompt" placeholder="Например: Cyberpunk car driving through rainy city at night, 8k resolution..."></textarea>
+        </div>
 
-  const uploadInput = document.getElementById('upload');
-  const previewImg = document.getElementById('preview');
-  const processBtn = document.getElementById('processBtn');
-  const statusDiv = document.getElementById('status');
+        <button class="btn-generate" id="generate-btn" onclick="generateContent()">Создать</button>
 
-  let base64Image = "";
+        <div class="result-box" id="result-box">
+            <div class="status-msg" id="placeholder-text">Результат появится здесь</div>
+            <div class="loader" id="loader">
+                <div class="spinner"></div>
+                <span id="loader-text">Генерируем...</span>
+            </div>
+            <div id="content-container" style="width: 100%;"></div>
+        </div>
+    </div>
 
-  uploadInput.addEventListener('change', (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        base64Image = event.target.result;
-        previewImg.src = base64Image;
-        previewImg.style.display = "block";
-        processBtn.disabled = false;
-        statusDiv.innerText = "";
-      };
-      reader.readAsDataURL(file);
-    }
-  });
+    <script>
+        // Инициализация VK Bridge
+        vkBridge.send("VKWebAppInit");
 
-  processBtn.addEventListener('click', async () => {
-    if (!base64Image) return;
+        // Укажи URL своего бэкенда на Render (замени при необходимости)
+        const BACKEND_URL = "https://photo-suit-backend.onrender.com/api/process-photo";
 
-    processBtn.disabled = true;
-    statusDiv.innerText = "⏳ Нейросеть генерирует костюм... (около 15-20 сек)";
+        let currentMode = "photo";
 
-    try {
-      const response = await fetch(BACKEND_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ image: base64Image })
-      });
+        function setMode(mode) {
+            currentMode = mode;
+            document.getElementById("btn-photo").classList.toggle("active", mode === "photo");
+            document.getElementById("btn-video").classList.toggle("active", mode === "video");
+        }
 
-      const data = await response.json();
+        async function generateContent() {
+            const promptInput = document.getElementById("prompt");
+            const promptText = promptInput.value.trim();
 
-      if (data.status === "success" && data.output_url) {
-        previewImg.src = data.output_url;
-        statusDiv.innerText = "✅ Готово!";
-      } else {
-        statusDiv.innerText = "❌ Ошибка: " + (data.error || "Не удалось обработать");
-      }
-    } catch (err) {
-      statusDiv.innerText = "❌ Ошибка сети или бэкенда";
-      console.error(err);
-    } finally {
-      processBtn.disabled = false;
-    }
-  });
-</script>
+            if (!promptText) {
+                alert("Пожалуйста, введите описание!");
+                return;
+            }
 
+            const btn = document.getElementById("generate-btn");
+            const loader = document.getElementById("loader");
+            const loaderText = document.getElementById("loader-text");
+            const placeholder = document.getElementById("placeholder-text");
+            const container = document.getElementById("content-container");
+
+            // Интерфейс в состояние загрузки
+            btn.disabled = true;
+            placeholder.style.display = "none";
+            container.innerHTML = "";
+            loader.style.display = "flex";
+            loaderText.innerText = currentMode === "video" 
+                ? "Генерируем видео (это может занять около 1-2 мин)..." 
+                : "Генерируем фото...";
+
+            try {
+                const response = await fetch(`${BACKEND_URL}/api/process-photo`, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        prompt: promptText,
+                        mode: currentMode
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.status === "success" && data.output_url) {
+                    if (currentMode === "photo") {
+                        container.innerHTML = `<img src="${data.output_url}" alt="Generated Photo">`;
+                    } else {
+                        container.innerHTML = `
+                            <video controls autoplay loop style="width:100%;">
+                                <source src="${data.output_url}" type="video/mp4">
+                                Ваш браузер не поддерживает видео.
+                            </video>`;
+                    }
+                } else {
+                    alert("Ошибка: " + (data.error || "Не удалось сгенерировать"));
+                    placeholder.style.display = "block";
+                }
+            } catch (err) {
+                console.error(err);
+                alert(" Ошибка сети или сервиса. Проверьте консоль.");
+                placeholder.style.display = "block";
+            } finally {
+                loader.style.display = "none";
+                btn.disabled = false;
+            }
+        }
+    </script>
 </body>
 </html>
