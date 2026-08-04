@@ -2,262 +2,419 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Content Studio (Grok & Flux)</title>
-
-    <!-- Подключение VK Bridge -->
-    <script src="https://unpkg.com/@vkontakte/vk-bridge/dist/browser.min.js"></script>
-    <script>
-        function initVKBridge() {
-            if (window.vkBridge) {
-                vkBridge.send('VKWebAppInit')
-                    .then(data => console.log('VK Bridge успешно инициализирован:', data))
-                    .catch(err => console.error('Ошибка VK Bridge:', err));
-            } else {
-                setTimeout(initVKBridge, 100);
-            }
-        }
-
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', initVKBridge);
-        } else {
-            initVKBridge();
-        }
-    </script>
-
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>AI Content Studio</title>
+    <!-- VK Mini Apps Bridge -->
+    <script src="https://unpkg.com/@vkontakte/vk-bridge/dist/index.umd.js"></script>
     <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #0f172a; color: #f8fafc; padding: 20px; display: flex; justify-content: center; }
-        .card { background: #1e293b; border-radius: 16px; padding: 30px; width: 100%; max-width: 500px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
-        h1 { font-size: 24px; text-align: center; margin-bottom: 20px; color: #38bdf8; }
-        .field { margin-bottom: 18px; }
-        label { display: block; margin-bottom: 8px; font-weight: 600; font-size: 14px; color: #94a3b8; }
-        .mode-toggle { display: flex; background: #0f172a; border-radius: 8px; padding: 4px; gap: 4px; }
-        .mode-btn { flex: 1; padding: 10px; border: none; background: transparent; color: #94a3b8; border-radius: 6px; cursor: pointer; font-weight: bold; transition: 0.2s; }
-        .mode-btn.active { background: #0284c7; color: white; }
-        textarea, select, input[type="text"] { width: 100%; padding: 12px; background: #0f172a; border: 1px solid #334155; border-radius: 8px; color: white; font-size: 14px; outline: none; }
-        textarea { resize: vertical; min-height: 90px; }
-        input[type="file"] { display: none; }
-        .file-upload-btn { display: block; text-align: center; padding: 10px; background: #334155; color: #e2e8f0; border-radius: 8px; cursor: pointer; font-size: 13px; transition: 0.2s; }
-        .file-upload-btn:hover { background: #475569; }
-        .preview-img { width: 100%; max-height: 150px; object-fit: cover; border-radius: 8px; margin-top: 10px; display: none; }
-        
-        /* Стили для блока магазина / пополнения */
-        .shop-box { background: #0f172a; border: 1px solid #334155; border-radius: 12px; padding: 15px; margin-bottom: 20px; }
-        .shop-title { font-size: 15px; font-weight: bold; color: #38bdf8; margin-bottom: 10px; text-align: center; }
-        .shop-grid { display: grid; grid-template-columns: 1fr; gap: 8px; }
-        .buy-btn { background: #059669; color: white; border: none; border-radius: 8px; padding: 10px; font-size: 13px; font-weight: bold; cursor: pointer; transition: 0.2s; text-align: center; }
-        .buy-btn:hover { background: #047857; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: #121213;
+            color: #ffffff;
+            margin: 0;
+            padding: 15px;
+            box-sizing: border-box;
+        }
 
-        .btn-submit { width: 100%; padding: 14px; background: #2563eb; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; transition: 0.2s; margin-top: 10px; }
-        .btn-submit:hover { background: #1d4ed8; }
-        .btn-submit:disabled { background: #475569; cursor: not-allowed; }
-        .result-box { margin-top: 20px; padding: 15px; background: #0f172a; border-radius: 8px; display: none; text-align: center; word-break: break-all; }
-        .result-box img, .result-box video { width: 100%; border-radius: 8px; margin-top: 10px; }
-        .status-text { font-size: 14px; color: #38bdf8; margin-top: 10px; }
+        .container {
+            max-width: 500px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            text-align: center;
+            font-size: 22px;
+            margin-bottom: 15px;
+            color: #2688eb;
+        }
+
+        /* Виджет баланса */
+        .balance-card {
+            background: #1e1e20;
+            border: 1px solid #333;
+            border-radius: 12px;
+            padding: 12px 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .balance-val {
+            font-size: 18px;
+            font-weight: bold;
+            color: #4bb34b;
+        }
+
+        .buy-btn {
+            background: #2688eb;
+            color: #fff;
+            border: none;
+            padding: 8px 14px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        /* Форма управления */
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 6px;
+            font-size: 14px;
+            color: #aaa;
+        }
+
+        select, textarea, input[type="file"] {
+            width: 100%;
+            background: #1e1e20;
+            border: 1px solid #333;
+            color: #fff;
+            padding: 10px;
+            border-radius: 8px;
+            box-sizing: border-box;
+            font-size: 14px;
+        }
+
+        textarea {
+            height: 80px;
+            resize: none;
+        }
+
+        .btn-generate {
+            width: 100%;
+            background: #4bb34b;
+            color: #fff;
+            border: none;
+            padding: 14px;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+
+        .btn-generate:disabled {
+            background: #444;
+            cursor: not-allowed;
+        }
+
+        /* Ценник под кнопкой */
+        .cost-info {
+            text-align: center;
+            font-size: 12px;
+            color: #888;
+            margin-top: 6px;
+        }
+
+        /* Результат */
+        #result-container {
+            margin-top: 20px;
+            text-align: center;
+        }
+
+        #result-media {
+            max-width: 100%;
+            border-radius: 10px;
+            display: none;
+        }
+
+        /* Модалка покупки голосов */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.8);
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .modal-content {
+            background: #1e1e20;
+            border-radius: 12px;
+            padding: 20px;
+            width: 100%;
+            max-width: 350px;
+        }
+
+        .tariff-item {
+            background: #2a2a2d;
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
 
-<div class="card">
+<div class="container">
     <h1>AI Content Studio</h1>
 
-    <!-- Блок покупки генераций / пакетов -->
-    <div class="shop-box">
-        <div class="shop-title">💎 Купить генерации</div>
-        <div class="shop-grid">
-            <button class="buy-btn" onclick="buyItem('photo_1')">1 генерация картинки</button>
-            <button class="buy-btn" onclick="buyItem('video_1')">1 генерация видео</button>
-            <button class="buy-btn" onclick="buyItem('pack_10_5')" style="background: #7c3aed;">Пакет: 10 картинок + 5 видео 🚀</button>
-        </div>
+    <!-- Плашка баланса -->
+    <div class="balance-card">
+        <div>Ваш баланс: <span id="balance-val" class="balance-val">0</span> голосов</div>
+        <button class="buy-btn" onclick="openBuyModal()">Пополнить</button>
     </div>
 
-    <div class="field">
+    <!-- Режим -->
+    <div class="form-group">
         <label>Режим генерации:</label>
-        <div class="mode-toggle">
-            <button class="mode-btn active" onclick="setMode('photo')" id="btn-photo">Фото (Grok)</button>
-            <button class="mode-btn" onclick="setMode('video')" id="btn-video">Видео (Grok Imagine)</button>
-        </div>
+        <select id="mode-select" onchange="updatePriceDisplay()">
+            <option value="photo">Картинка (xAI Grok Image)</option>
+            <option value="video">Видео (xAI Grok Video)</option>
+        </select>
     </div>
 
-    <div class="field">
-        <label>Промпт (описание):</label>
-        <textarea id="prompt" placeholder="Опиши сцену подробным текстом..."></textarea>
+    <!-- Длительность (для видео) -->
+    <div class="form-group" id="duration-group" style="display: none;">
+        <label>Длительность видео:</label>
+        <select id="duration-select" onchange="updatePriceDisplay()">
+            <option value="5">5 секунд</option>
+            <option value="10">10 секунд</option>
+            <option value="15">15 секунд</option>
+        </select>
     </div>
 
-    <div class="field">
-        <label>Исходное изображение (опционально для Image-to-Image / Video):</label>
-        <label for="image-input" class="file-upload-btn" id="upload-label">Выбрать файл изображения</label>
-        <input type="file" id="image-input" accept="image/*" onchange="handleFileSelect(event)">
-        <img id="image-preview" class="preview-img" alt="Предпросмотр">
+    <!-- Промпт -->
+    <div class="form-group">
+        <label>Промпт (Описание):</label>
+        <textarea id="prompt-input" placeholder="Опишите желаемый результат..."></textarea>
     </div>
 
-    <div class="field">
-        <label>Соотношение сторон:</label>
-        <select id="aspect_ratio">
-            <option value="16:9">16:9 (Горизонтальное / YouTube)</option>
-            <option value="9:16" selected>9:16 (Вертикальное / Shorts / Reels)</option>
+    <!-- Соотношение сторон -->
+    <div class="form-group">
+        <label>Формат (Соотношение сторон):</label>
+        <select id="ratio-select">
+            <option value="9:16">9:16 (Вертикальное / Reels / Stories)</option>
+            <option value="16:9">16:9 (Горизонтальное)</option>
             <option value="1:1">1:1 (Квадрат)</option>
-            <option value="4:3">4:3</option>
-            <option value="3:4">3:4</option>
         </select>
     </div>
 
-    <div class="field" id="duration-block" style="display: none;">
-        <label>Длительность видео (сек):</label>
-        <select id="duration">
-            <option value="5">5 сек</option>
-            <option value="8">8 сек</option>
-            <option value="10">10 сек</option>
-            <option value="15" selected>15 сек ($0.75)</option>
-        </select>
+    <!-- Исходное фото (Image-to-Image) -->
+    <div class="form-group">
+        <label>Исходное фото (опционально):</label>
+        <input type="file" id="image-file" accept="image/*">
     </div>
 
-    <button class="btn-submit" id="submit-btn" onclick="generate()">Сгенерировать</button>
+    <!-- Кнопка генерации -->
+    <button id="generate-btn" class="btn-generate" onclick="startGeneration()">Сгенерировать</button>
+    <div id="cost-info" class="cost-info">Стоимость: 2 голоса</div>
 
-    <div class="result-box" id="result-box">
-        <div class="status-text" id="status-text">Обработка...</div>
-        <div id="media-container"></div>
+    <!-- Результат -->
+    <div id="result-container">
+        <div id="status-text"></div>
+        <img id="result-img" style="display:none; max-width:100%; border-radius:10px;">
+        <video id="result-video" controls style="display:none; max-width:100%; border-radius:10px;"></video>
+    </div>
+</div>
+
+<!-- Модальное окно покупки голосов -->
+<div id="buy-modal" class="modal">
+    <div class="modal-content">
+        <h3 style="margin-top:0;">Купить голоса</h3>
+        
+        <div class="tariff-item" onclick="buyVotes('votes_2')">
+            <span>2 голоса (1 фото)</span>
+            <button class="buy-btn">Купить</button>
+        </div>
+        <div class="tariff-item" onclick="buyVotes('votes_6')">
+            <span>6 голосов (видео 5 сек)</span>
+            <button class="buy-btn">Купить</button>
+        </div>
+        <div class="tariff-item" onclick="buyVotes('votes_11')">
+            <span>11 голосов (видео 10 сек)</span>
+            <button class="buy-btn">Купить</button>
+        </div>
+        <div class="tariff-item" onclick="buyVotes('votes_16')">
+            <span>16 голосов (видео 15 сек)</span>
+            <button class="buy-btn">Купить</button>
+        </div>
+        <div class="tariff-item" onclick="buyVotes('votes_30')">
+            <span>30 голосов (Выгодно!)</span>
+            <button class="buy-btn">Купить</button>
+        </div>
+
+        <button onclick="closeBuyModal()" style="width:100%; margin-top:15px; padding:10px; background:#444; color:#fff; border:none; border-radius:8px;">Закрыть</button>
     </div>
 </div>
 
 <script>
-    const API_BASE_URL = "https://photo-suit-backend.onrender.com";
-    let currentMode = "photo";
-    let imageBase64 = null;
+    const BACKEND_URL = "https://photo-suit-backend.onrender.com";
+    let vkUserId = null;
 
-    function setMode(mode) {
-        currentMode = mode;
-        document.getElementById("btn-photo").classList.toggle("active", mode === "photo");
-        document.getElementById("btn-video").classList.toggle("active", mode === "video");
-        document.getElementById("duration-block").style.display = mode === "video" ? "block" : "none";
-    }
+    // Инициализация VK Bridge
+    vkBridge.send('VKWebAppInit');
 
-    function handleFileSelect(event) {
-        const file = event.target.files[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                imageBase64 = e.target.result;
-                const preview = document.getElementById("image-preview");
-                preview.src = imageBase64;
-                preview.style.display = "block";
-                document.getElementById("upload-label").innerText = "Файл выбран: " + file.name;
-            };
-            reader.readAsDataURL(file);
+    vkBridge.send('VKWebAppGetUserInfo')
+        .then(user => {
+            vkUserId = String(user.id);
+            refreshBalance();
+        })
+        .catch(err => console.error("Ошибка VK Bridge:", err));
+
+    // Обновление ценника под кнопкой
+    function updatePriceDisplay() {
+        const mode = document.getElementById('mode-select').value;
+        const durationGroup = document.getElementById('duration-group');
+        const costInfo = document.getElementById('cost-info');
+
+        if (mode === 'video') {
+            durationGroup.style.display = 'block';
+            const dur = document.getElementById('duration-select').value;
+            let cost = 6;
+            if (dur === '10') cost = 11;
+            if (dur === '15') cost = 16;
+            costInfo.innerText = `Стоимость: ${cost} голосов`;
+        } else {
+            durationGroup.style.display = 'none';
+            costInfo.innerText = `Стоимость: 2 голоса`;
         }
     }
 
-    // Функция вызова официальной оплаты VK
-    function buyItem(itemKey) {
+    // Запрос баланса с бэкенда
+    function refreshBalance() {
+        if (!vkUserId) return;
+        fetch(`${BACKEND_URL}/api/balance/${vkUserId}`)
+            .then(res => res.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    document.getElementById('balance-val').innerText = data.balance;
+                }
+            })
+            .catch(err => console.error(err));
+    }
+
+    // Покупка голосов через VK Pay / OrderBox
+    function buyVotes(itemKey) {
         vkBridge.send('VKWebAppShowOrderBox', {
             type: 'item',
-            item: itemKey // Убедись, что такие ID созданы в кабинете разработчика VK
-        })
-        .then((data) => {
+            item: itemKey
+        }).then(data => {
             if (data.success) {
-                alert("Оплата прошла успешно! Генерации зачислены на ваш баланс.");
-                // Здесь можно отправить запрос на свой бэкенд, чтобы начислить баланс юзеру по его VK ID
+                setTimeout(refreshBalance, 1500); // Обновляем баланс через паузу
+                closeBuyModal();
             }
-        })
-        .catch((error) => {
-            console.error("Ошибка оплаты:", error);
-            alert("Оплата была отменена или произошла ошибка.");
+        }).catch(err => console.error(err));
+    }
+
+    function openBuyModal() { document.getElementById('buy-modal').style.display = 'flex'; }
+    function closeBuyModal() { document.getElementById('buy-modal').style.display = 'none'; }
+
+    // Конвертация загруженного файла в Base64
+    function fileToBase64(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = error => reject(error);
         });
     }
 
-    async function generate() {
-        const prompt = document.getElementById("prompt").value.trim();
-        const aspectRatio = document.getElementById("aspect_ratio").value;
-        const duration = parseInt(document.getElementById("duration").value);
-
-        if (!prompt && !imageBase64) {
-            alert("Пожалуйста, введите описание или загрузите изображение!");
+    // Запуск генерации
+    async function startGeneration() {
+        if (!vkUserId) {
+            alert("Не удалось определить ваш VK ID");
             return;
         }
 
-        const submitBtn = document.getElementById("submit-btn");
-        const resultBox = document.getElementById("result-box");
-        const statusText = document.getElementById("status-text");
-        const mediaContainer = document.getElementById("media-container");
+        const mode = document.getElementById('mode-select').value;
+        const duration = parseInt(document.getElementById('duration-select').value);
+        const prompt = document.getElementById('prompt-input').value;
+        const ratio = document.getElementById('ratio-select').value;
+        const fileInput = document.getElementById('image-file');
 
-        submitBtn.disabled = true;
-        resultBox.style.display = "block";
-        statusText.innerText = "Отправка запроса в Grok...";
-        mediaContainer.innerHTML = "";
+        let imageBase64 = null;
+        if (fileInput.files.length > 0) {
+            imageBase64 = await fileToBase64(fileInput.files[0]);
+        }
+
+        const statusText = document.getElementById('status-text');
+        const btn = document.getElementById('generate-btn');
+        const imgRes = document.getElementById('result-img');
+        const videoRes = document.getElementById('result-video');
+
+        btn.disabled = true;
+        statusText.innerText = "Запуск генерации...";
+        imgRes.style.display = "none";
+        videoRes.style.display = "none";
 
         const payload = {
+            user_id: vkUserId,
             prompt: prompt,
-            mode: currentMode,
-            aspect_ratio: aspectRatio,
+            mode: mode,
+            aspect_ratio: ratio,
             duration: duration,
             image: imageBase64
         };
 
         try {
-            const response = await fetch(`${API_BASE_URL}/api/generate`, {
+            const res = await fetch(`${BACKEND_URL}/api/generate`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(payload)
             });
 
-            const data = await response.json();
+            const data = await res.json();
 
-            if (data.status === "error") {
+            if (data.status === 'error') {
                 statusText.innerText = "Ошибка: " + data.error;
-                submitBtn.disabled = false;
+                btn.disabled = false;
                 return;
             }
 
-            if (data.status === "success" && data.output_url) {
+            // Обновляем баланс сразу после успешного старта/списания
+            refreshBalance();
+
+            if (data.mode === 'photo') {
+                imgRes.src = data.output_url;
+                imgRes.style.display = "block";
                 statusText.innerText = "Готово!";
-                renderMedia(data.output_url);
-                submitBtn.disabled = false;
-            } else if (data.status === "processing" && data.prediction_id) {
-                statusText.innerText = "Генерация видео через Grok Imagine (до 15 сек)...";
-                pollStatus(data.prediction_id);
+                btn.disabled = false;
+            } else if (data.mode === 'video') {
+                statusText.innerText = "Видео генерируется, подождите...";
+                pollVideoStatus(data.prediction_id);
             }
-        } catch (err) {
-            statusText.innerText = "Ошибка сети: " + err.message;
-            submitBtn.disabled = false;
+
+        } catch (e) {
+            statusText.innerText = "Ошибка сервера: " + e.message;
+            btn.disabled = false;
         }
     }
 
-    async function pollStatus(predictionId) {
-        const statusText = document.getElementById("status-text");
-        const submitBtn = document.getElementById("submit-btn");
-
+    // Опрос статуса генерации видео
+    function pollVideoStatus(predictionId) {
         const interval = setInterval(async () => {
             try {
-                const res = await fetch(`${API_BASE_URL}/api/status/${predictionId}`);
+                const res = await fetch(`${BACKEND_URL}/api/status/${predictionId}`);
                 const data = await res.json();
 
-                if (data.status === "success") {
+                if (data.status === 'success') {
                     clearInterval(interval);
-                    statusText.innerText = "Видео успешно создано!";
-                    renderMedia(data.output_url);
-                    submitBtn.disabled = false;
-                } else if (data.status === "error") {
+                    const videoRes = document.getElementById('result-video');
+                    videoRes.src = data.output_url;
+                    videoRes.style.display = "block";
+                    document.getElementById('status-text').innerText = "Готово!";
+                    document.getElementById('generate-btn').disabled = false;
+                } else if (data.status === 'error') {
                     clearInterval(interval);
-                    statusText.innerText = "Ошибка генерации: " + data.error;
-                    submitBtn.disabled = false;
-                } else {
-                    statusText.innerText = "Генерация кадра в процессе (статус: " + (data.progress || "processing") + ")...";
+                    document.getElementById('status-text').innerText = "Ошибка генерации: " + data.error;
+                    document.getElementById('generate-btn').disabled = false;
                 }
             } catch (e) {
                 console.error(e);
             }
         }, 3000);
     }
-
-    function renderMedia(url) {
-        const container = document.getElementById("media-container");
-        if (currentMode === "photo") {
-            container.innerHTML = `<img src="${url}" alt="Сгенерированное фото">`;
-        } else {
-            container.innerHTML = `<video src="${url}" controls autoplay loop></video>`;
-        }
-    }
 </script>
+
 </body>
 </html>
