@@ -4,16 +4,27 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI Content Studio (Grok & Flux)</title>
-    <!-- Подключение библиотеки VK Bridge -->
-    <script src="https://unpkg.com/@vkontakte/vk-bridge/dist/index.umd.js"></script>
+
+    <!-- Подключение VK Bridge -->
+    <script src="https://unpkg.com/@vkontakte/vk-bridge/dist/browser.min.js"></script>
     <script>
-        // Инициализация VK Mini App
-        vkBridge.send('VKWebAppInit').then(data => {
-            console.log('VK Bridge успешно инициализирован:', data);
-        }).catch(error => {
-            console.error('Ошибка инициализации VK Bridge:', error);
-        });
+        function initVKBridge() {
+            if (window.vkBridge) {
+                vkBridge.send('VKWebAppInit')
+                    .then(data => console.log('VK Bridge успешно инициализирован:', data))
+                    .catch(err => console.error('Ошибка VK Bridge:', err));
+            } else {
+                setTimeout(initVKBridge, 100);
+            }
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initVKBridge);
+        } else {
+            initVKBridge();
+        }
     </script>
+
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #0f172a; color: #f8fafc; padding: 20px; display: flex; justify-content: center; }
