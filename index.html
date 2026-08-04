@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>AI Content Studio</title>
-    <!-- VK Mini Apps Bridge -->
-    <script src="https://unpkg.com/@vkontakte/vk-bridge/dist/index.umd.js"></script>
+    <!-- Официальный скрипт VK Bridge -->
+    <script src="https://unpkg.com/@vkontakte/vk-bridge/dist/browser.min.js"></script>
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
@@ -116,12 +116,6 @@
             text-align: center;
         }
 
-        #result-media {
-            max-width: 100%;
-            border-radius: 10px;
-            display: none;
-        }
-
         /* Модалка покупки голосов */
         .modal {
             display: none;
@@ -131,6 +125,7 @@
             align-items: center;
             justify-content: center;
             padding: 20px;
+            z-index: 999;
         }
 
         .modal-content {
@@ -212,8 +207,8 @@
     <!-- Результат -->
     <div id="result-container">
         <div id="status-text"></div>
-        <img id="result-img" style="display:none; max-width:100%; border-radius:10px;">
-        <video id="result-video" controls style="display:none; max-width:100%; border-radius:10px;"></video>
+        <img id="result-img" style="display:none; max-width:100%; border-radius:10px; margin-top:10px;">
+        <video id="result-video" controls style="display:none; max-width:100%; border-radius:10px; margin-top:10px;"></video>
     </div>
 </div>
 
@@ -243,7 +238,7 @@
             <button class="buy-btn">Купить</button>
         </div>
 
-        <button onclick="closeBuyModal()" style="width:100%; margin-top:15px; padding:10px; background:#444; color:#fff; border:none; border-radius:8px;">Закрыть</button>
+        <button onclick="closeBuyModal()" style="width:100%; margin-top:15px; padding:10px; background:#444; color:#fff; border:none; border-radius:8px; cursor:pointer;">Закрыть</button>
     </div>
 </div>
 
@@ -251,17 +246,30 @@
     const BACKEND_URL = "https://photo-suit-backend.onrender.com";
     let vkUserId = null;
 
-    // Инициализация VK Bridge
-    vkBridge.send('VKWebAppInit');
+    // Безопасная инициализация VK Bridge
+    async function initVK() {
+        if (typeof vkBridge === 'undefined') {
+            console.warn("VK Bridge не обнаружен.");
+            vkUserId = "test_user_123";
+            refreshBalance();
+            return;
+        }
 
-    vkBridge.send('VKWebAppGetUserInfo')
-        .then(user => {
+        try {
+            await vkBridge.send('VKWebAppInit');
+            const user = await vkBridge.send('VKWebAppGetUserInfo');
             vkUserId = String(user.id);
             refreshBalance();
-        })
-        .catch(err => console.error("Ошибка VK Bridge:", err));
+        } catch (err) {
+            console.error("Ошибка VK Bridge:", err);
+            vkUserId = "test_user_123";
+            refreshBalance();
+        }
+    }
 
-    // Обновление ценника под кнопкой
+    document.addEventListener("DOMContentLoaded", initVK);
+
+    // Обновление отображения цены под кнопкой
     function updatePriceDisplay() {
         const mode = document.getElementById('mode-select').value;
         const durationGroup = document.getElementById('duration-group');
@@ -295,21 +303,26 @@
 
     // Покупка голосов через VK Pay / OrderBox
     function buyVotes(itemKey) {
+        if (typeof vkBridge === 'undefined') {
+            alert("Покупка доступна только внутри ВКонтакте!");
+            return;
+        }
+
         vkBridge.send('VKWebAppShowOrderBox', {
             type: 'item',
             item: itemKey
         }).then(data => {
             if (data.success) {
-                setTimeout(refreshBalance, 1500); // Обновляем баланс через паузу
+                setTimeout(refreshBalance, 1500);
                 closeBuyModal();
             }
-        }).catch(err => console.error(err));
+        }).catch(err => console.error("Ошибка VK Pay:", err));
     }
 
     function openBuyModal() { document.getElementById('buy-modal').style.display = 'flex'; }
     function closeBuyModal() { document.getElementById('buy-modal').style.display = 'none'; }
 
-    // Конвертация загруженного файла в Base64
+    // Конвертация файла в Base64
     function fileToBase64(file) {
         return new Promise((resolve, reject) => {
             const reader = new FileReader();
@@ -322,7 +335,7 @@
     // Запуск генерации
     async function startGeneration() {
         if (!vkUserId) {
-            alert("Не удалось определить ваш VK ID");
+            alert("Ошибка: не определён ID пользователя.");
             return;
         }
 
@@ -371,7 +384,6 @@
                 return;
             }
 
-            // Обновляем баланс сразу после успешного старта/списания
             refreshBalance();
 
             if (data.mode === 'photo') {
@@ -390,7 +402,7 @@
         }
     }
 
-    // Опрос статуса генерации видео
+    // Опрос статуса видео
     function pollVideoStatus(predictionId) {
         const interval = setInterval(async () => {
             try {
