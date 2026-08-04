@@ -13,6 +13,7 @@
             color: #ffffff;
             margin: 0;
             padding: 15px;
+            padding-bottom: 70px; /* Отступ под баннер VK */
             box-sizing: border-box;
         }
 
@@ -48,6 +49,16 @@
 
         .buy-btn {
             background: #2688eb;
+            color: #fff;
+            border: none;
+            padding: 8px 14px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .ad-btn {
+            background: #e64a19;
             color: #fff;
             border: none;
             padding: 8px 14px;
@@ -212,11 +223,22 @@
     </div>
 </div>
 
-<!-- Модальное окно покупки голосов -->
+<!-- Модальное окно покупки / получения голосов -->
 <div id="buy-modal" class="modal">
     <div class="modal-content">
-        <h3 style="margin-top:0;">Купить голоса</h3>
+        <h3 style="margin-top:0;">Получить голоса</h3>
         
+        <!-- Опция бесплатной рекламы -->
+        <div class="tariff-item" style="border: 1px solid #ff5722;" onclick="watchAdReward()">
+            <div>
+                <strong style="color: #ff5722;">Смотреть рекламу</strong>
+                <div style="font-size: 11px; color: #aaa;">+0.25 голоса за ролик</div>
+            </div>
+            <button class="ad-btn">Смотреть</button>
+        </div>
+
+        <hr style="border-color: #333; margin: 12px 0;">
+
         <div class="tariff-item" onclick="buyVotes('votes_2')">
             <span>2 голоса (1 фото)</span>
             <button class="buy-btn">Купить</button>
@@ -246,7 +268,7 @@
     const BACKEND_URL = "https://photo-suit-backend.onrender.com";
     let vkUserId = null;
 
-    // Безопасная инициализация VK Bridge
+    // Безопасная инициализация VK Bridge и загрузка баннерной рекламы
     async function initVK() {
         if (typeof vkBridge === 'undefined') {
             console.warn("VK Bridge не обнаружен.");
@@ -260,6 +282,12 @@
             const user = await vkBridge.send('VKWebAppGetUserInfo');
             vkUserId = String(user.id);
             refreshBalance();
+
+            // Автоматически показываем постоянный баннер рекламы внизу экрана
+            vkBridge.send('VKWebAppShowBannerAd', {
+                banner_location: 'bottom'
+            }).catch(e => console.log("Баннер рекламы не доступен:", e));
+
         } catch (err) {
             console.error("Ошибка VK Bridge:", err);
             vkUserId = "test_user_123";
@@ -299,6 +327,34 @@
                 }
             })
             .catch(err => console.error(err));
+    }
+
+    // Просмотр вознаграждаемой рекламы (+0.25 голоса)
+    function watchAdReward() {
+        if (typeof vkBridge === 'undefined') {
+            alert("Просмотр рекламы доступен только внутри ВКонтакте!");
+            return;
+        }
+
+        vkBridge.send('VKWebAppShowNativeAds', { ad_format: 'reward' })
+            .then(async (data) => {
+                if (data.result) {
+                    // Реклама полностью просмотрена -> начисляем 0.25 голоса на бэкенд
+                    await fetch(`${BACKEND_URL}/api/add-reward-ad`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ user_id: vkUserId })
+                    });
+                    alert("Отлично! Вам начислено +0.25 голоса за просмотр рекламы.");
+                    refreshBalance();
+                } else {
+                    alert("Реклама не была досмотрена до конца.");
+                }
+            })
+            .catch(err => {
+                console.error("Ошибка рекламы:", err);
+                alert("Сейчас нет доступных рекламных роликов. Попробуйте позже.");
+            });
     }
 
     // Покупка голосов через VK Pay / OrderBox
