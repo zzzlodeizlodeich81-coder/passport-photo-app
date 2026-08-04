@@ -127,7 +127,7 @@
             text-align: center;
         }
 
-        /* Модалка покупки голосов */
+        /* Модалка покупки кадров */
         .modal {
             display: none;
             position: fixed;
@@ -184,7 +184,7 @@
 
     <!-- Плашка баланса -->
     <div class="balance-card">
-        <div>Ваш баланс: <span id="balance-val" class="balance-val">0</span> голосов</div>
+        <div>Ваш баланс: <span id="balance-val" class="balance-val">0</span> кадров</div>
         <button class="buy-btn" onclick="openBuyModal()">Пополнить</button>
     </div>
 
@@ -231,7 +231,7 @@
 
     <!-- Кнопка генерации -->
     <button id="generate-btn" class="btn-generate" onclick="startGeneration()">Сгенерировать</button>
-    <div id="cost-info" class="cost-info">Стоимость: 2 голоса</div>
+    <div id="cost-info" class="cost-info">Стоимость: 40 кадров</div>
 
     <!-- Результат -->
     <div id="result-container">
@@ -241,16 +241,16 @@
     </div>
 </div>
 
-<!-- Модальное окно покупки / получения голосов -->
+<!-- Модальное окно покупки / получения кадров -->
 <div id="buy-modal" class="modal">
     <div class="modal-content">
-        <h3 style="margin-top:0;">Получить голоса</h3>
+        <h3 style="margin-top:0;">Получить кадры</h3>
         
         <!-- Опция бесплатной рекламы -->
         <div class="tariff-item" style="border: 1px solid #ff5722;" onclick="watchAdReward()">
             <div>
                 <strong style="color: #ff5722;">Смотреть рекламу</strong>
-                <div style="font-size: 11px; color: #aaa;">+0.25 голоса за ролик</div>
+                <div style="font-size: 11px; color: #aaa;">+5 кадров за ролик</div>
             </div>
             <button class="ad-btn">Смотреть</button>
         </div>
@@ -258,23 +258,23 @@
         <hr style="border-color: #333; margin: 12px 0;">
 
         <div class="tariff-item" onclick="buyVotes('votes_2')">
-            <span>2 голоса (1 фото)</span>
+            <span>40 кадров (1 фото) — 2 голоса</span>
             <button class="buy-btn">Купить</button>
         </div>
         <div class="tariff-item" onclick="buyVotes('votes_6')">
-            <span>6 голосов (видео 5 сек)</span>
+            <span>120 кадров (видео 5с) — 6 голосов</span>
             <button class="buy-btn">Купить</button>
         </div>
         <div class="tariff-item" onclick="buyVotes('votes_11')">
-            <span>11 голосов (видео 10 сек)</span>
+            <span>220 кадров (видео 10с) — 11 голосов</span>
             <button class="buy-btn">Купить</button>
         </div>
         <div class="tariff-item" onclick="buyVotes('votes_16')">
-            <span>16 голосов (видео 15 сек)</span>
+            <span>320 кадров (видео 15с) — 16 голосов</span>
             <button class="buy-btn">Купить</button>
         </div>
         <div class="tariff-item" onclick="buyVotes('votes_30')">
-            <span>30 голосов (Выгодно!)</span>
+            <span>600 кадров (Выгодно!) — 30 голосов</span>
             <button class="buy-btn">Купить</button>
         </div>
 
@@ -289,7 +289,6 @@
     const BACKEND_URL = "https://photo-suit-backend.onrender.com";
     let vkUserId = null;
 
-    // Всплывающее уведомление в стиле VK
     function showToast(message, isError = false) {
         const toast = document.getElementById('toast-notification');
         toast.style.background = isError ? '#e64a19' : '#2688eb';
@@ -300,7 +299,6 @@
         }, 3500);
     }
 
-    // Безопасная инициализация VK Bridge и загрузка баннерной рекламы
     async function initVK() {
         if (typeof vkBridge === 'undefined') {
             console.warn("VK Bridge не обнаружен.");
@@ -315,7 +313,6 @@
             vkUserId = String(user.id);
             refreshBalance();
 
-            // Автоматически показываем постоянный баннер рекламы внизу экрана (работает преимущественно на моб. устройствах)
             vkBridge.send('VKWebAppShowBannerAd', {
                 banner_location: 'bottom'
             }).catch(e => console.log("Баннер рекламы пока недоступен:", e));
@@ -329,7 +326,6 @@
 
     document.addEventListener("DOMContentLoaded", initVK);
 
-    // Обновление отображения цены под кнопкой
     function updatePriceDisplay() {
         const mode = document.getElementById('mode-select').value;
         const durationGroup = document.getElementById('duration-group');
@@ -338,17 +334,16 @@
         if (mode === 'video') {
             durationGroup.style.display = 'block';
             const dur = document.getElementById('duration-select').value;
-            let cost = 6;
-            if (dur === '10') cost = 11;
-            if (dur === '15') cost = 16;
-            costInfo.innerText = `Стоимость: ${cost} голосов`;
+            let cost = 120;
+            if (dur === '10') cost = 220;
+            if (dur === '15') cost = 320;
+            costInfo.innerText = `Стоимость: ${cost} кадров`;
         } else {
             durationGroup.style.display = 'none';
-            costInfo.innerText = `Стоимость: 2 голоса`;
+            costInfo.innerText = `Стоимость: 40 кадров`;
         }
     }
 
-    // Запрос баланса с бэкенда
     function refreshBalance() {
         if (!vkUserId) return;
         fetch(`${BACKEND_URL}/api/balance/${vkUserId}`)
@@ -361,18 +356,15 @@
             .catch(err => console.error(err));
     }
 
-    // Просмотр вознаграждаемой рекламы (+0.25 голоса)
     function watchAdReward() {
         if (typeof vkBridge === 'undefined') {
             showToast("Просмотр рекламы доступен только внутри приложения ВКонтакте!", true);
             return;
         }
 
-        // Проверяем доступность рекламы перед вызовом
         vkBridge.send('VKWebAppCheckNativeAds', { ad_format: 'reward' })
             .then((checkRes) => {
                 if (checkRes.result) {
-                    // Реклама доступна -> показываем
                     vkBridge.send('VKWebAppShowNativeAds', { ad_format: 'reward' })
                         .then(async (data) => {
                             if (data.result) {
@@ -381,7 +373,7 @@
                                     headers: { 'Content-Type': 'application/json' },
                                     body: JSON.stringify({ user_id: vkUserId })
                                 });
-                                showToast("Отлично! Начислено +0.25 голоса за просмотр рекламы.");
+                                showToast("Отлично! Начислено +5 кадров за просмотр рекламы.");
                                 refreshBalance();
                             } else {
                                 showToast("Реклама не была досмотрена до конца.", true);
@@ -396,7 +388,6 @@
                 }
             })
             .catch(() => {
-                // Если метод check не сработал — пробуем напрямую
                 vkBridge.send('VKWebAppShowNativeAds', { ad_format: 'reward' })
                     .then(async (data) => {
                         if (data.result) {
@@ -405,7 +396,7 @@
                                 headers: { 'Content-Type': 'application/json' },
                                 body: JSON.stringify({ user_id: vkUserId })
                             });
-                            showToast("Отлично! Начислено +0.25 голоса.");
+                            showToast("Отлично! Начислено +5 кадров.");
                             refreshBalance();
                         }
                     })
@@ -415,7 +406,6 @@
             });
     }
 
-    // Покупка голосов через VK Pay / OrderBox
     function buyVotes(itemKey) {
         if (typeof vkBridge === 'undefined') {
             showToast("Покупка доступна только внутри ВКонтакте!", true);
@@ -437,7 +427,6 @@
     function openBuyModal() { document.getElementById('buy-modal').style.display = 'flex'; }
     function closeBuyModal() { document.getElementById('buy-modal').style.display = 'none'; }
 
-    // Конвертация файла в Base64
     function fileToBase64(file) {
         return new Promise((resolve, reject) => {
             const reader = new FileReader();
@@ -447,7 +436,6 @@
         });
     }
 
-    // Запуск генерации
     async function startGeneration() {
         if (!vkUserId) {
             showToast("Ошибка: не определён ID пользователя.", true);
@@ -519,7 +507,6 @@
         }
     }
 
-    // Опрос статуса видео
     function pollVideoStatus(predictionId) {
         const interval = setInterval(async () => {
             try {
