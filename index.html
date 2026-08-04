@@ -41,6 +41,14 @@
         .file-upload-btn { display: block; text-align: center; padding: 10px; background: #334155; color: #e2e8f0; border-radius: 8px; cursor: pointer; font-size: 13px; transition: 0.2s; }
         .file-upload-btn:hover { background: #475569; }
         .preview-img { width: 100%; max-height: 150px; object-fit: cover; border-radius: 8px; margin-top: 10px; display: none; }
+        
+        /* Стили для блока магазина / пополнения */
+        .shop-box { background: #0f172a; border: 1px solid #334155; border-radius: 12px; padding: 15px; margin-bottom: 20px; }
+        .shop-title { font-size: 15px; font-weight: bold; color: #38bdf8; margin-bottom: 10px; text-align: center; }
+        .shop-grid { display: grid; grid-template-columns: 1fr; gap: 8px; }
+        .buy-btn { background: #059669; color: white; border: none; border-radius: 8px; padding: 10px; font-size: 13px; font-weight: bold; cursor: pointer; transition: 0.2s; text-align: center; }
+        .buy-btn:hover { background: #047857; }
+
         .btn-submit { width: 100%; padding: 14px; background: #2563eb; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; transition: 0.2s; margin-top: 10px; }
         .btn-submit:hover { background: #1d4ed8; }
         .btn-submit:disabled { background: #475569; cursor: not-allowed; }
@@ -53,6 +61,16 @@
 
 <div class="card">
     <h1>AI Content Studio</h1>
+
+    <!-- Блок покупки генераций / пакетов -->
+    <div class="shop-box">
+        <div class="shop-title">💎 Купить генерации</div>
+        <div class="shop-grid">
+            <button class="buy-btn" onclick="buyItem('photo_1')">1 генерация картинки</button>
+            <button class="buy-btn" onclick="buyItem('video_1')">1 генерация видео</button>
+            <button class="buy-btn" onclick="buyItem('pack_10_5')" style="background: #7c3aed;">Пакет: 10 картинок + 5 видео 🚀</button>
+        </div>
+    </div>
 
     <div class="field">
         <label>Режим генерации:</label>
@@ -128,6 +146,24 @@
             };
             reader.readAsDataURL(file);
         }
+    }
+
+    // Функция вызова официальной оплаты VK
+    function buyItem(itemKey) {
+        vkBridge.send('VKWebAppShowOrderBox', {
+            type: 'item',
+            item: itemKey // Убедись, что такие ID созданы в кабинете разработчика VK
+        })
+        .then((data) => {
+            if (data.success) {
+                alert("Оплата прошла успешно! Генерации зачислены на ваш баланс.");
+                // Здесь можно отправить запрос на свой бэкенд, чтобы начислить баланс юзеру по его VK ID
+            }
+        })
+        .catch((error) => {
+            console.error("Ошибка оплаты:", error);
+            alert("Оплата была отменена или произошла ошибка.");
+        });
     }
 
     async function generate() {
