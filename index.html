@@ -1,194 +1,324 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Content Studio</title>
-    <script src="https://unpkg.com/@vkontakte/vk-bridge/dist/index.umd.js"></script>
-    <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, sans-serif; }
-        body { background-color: #0f0f12; color: #ffffff; display: flex; justify-content: center; padding: 16px; min-height: 100vh; }
-        .container { width: 100%; max-width: 480px; display: flex; flex-direction: column; gap: 16px; }
-        .header { text-align: center; padding: 8px 0; }
-        .header h1 { font-size: 24px; font-weight: 700; background: linear-gradient(135deg, #0084ff, #a855f7); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-        .header p { font-size: 13px; color: #8e8e93; margin-top: 4px; }
-        
-        .section-label { font-size: 12px; color: #8e8e93; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Content Studio</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
 
-        .mode-selector, .ratio-selector { display: flex; background: #1c1c1e; border-radius: 12px; padding: 4px; gap: 4px; }
-        .mode-btn, .ratio-btn { flex: 1; padding: 10px; border: none; background: transparent; color: #8e8e93; font-weight: 600; font-size: 13px; border-radius: 8px; cursor: pointer; transition: all 0.2s; }
-        .mode-btn.active, .ratio-btn.active { background: #2c2c2e; color: #ffffff; box-shadow: 0 2px 8px rgba(0,0,0,0.4); }
+    body {
+      background-color: #0f172a;
+      color: #f8fafc;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      padding: 20px;
+    }
 
-        .input-group { display: flex; flex-direction: column; gap: 8px; }
-        textarea { width: 100%; height: 90px; background: #1c1c1e; border: 1px solid #2c2c2e; border-radius: 12px; color: #fff; padding: 12px; font-size: 14px; resize: none; outline: none; }
-        textarea:focus { border-color: #0084ff; }
+    .container {
+      background: #1e293b;
+      padding: 30px;
+      border-radius: 16px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+      width: 100%;
+      max-width: 600px;
+    }
 
-        .btn-generate { width: 100%; padding: 15px; border: none; border-radius: 12px; background: linear-gradient(135deg, #0084ff, #8a2be2); color: white; font-size: 16px; font-weight: 600; cursor: pointer; }
-        .btn-generate:disabled { opacity: 0.5; cursor: not-allowed; }
+    h1 {
+      font-size: 24px;
+      margin-bottom: 20px;
+      text-align: center;
+      color: #38bdf8;
+    }
 
-        .result-box { background: #1c1c1e; border-radius: 12px; padding: 12px; min-height: 220px; display: flex; flex-direction: column; align-items: center; justify-content: center; border: 1px dashed #2c2c2e; }
-        .result-box img, .result-box video { width: 100%; border-radius: 8px; max-height: 500px; object-fit: contain; }
+    .form-group {
+      margin-bottom: 20px;
+    }
 
-        .loader { display: none; flex-direction: column; align-items: center; gap: 12px; color: #8e8e93; font-size: 14px; text-align: center; }
-        .spinner { width: 36px; height: 36px; border: 3px solid rgba(255,255,255,0.1); border-top: 3px solid #0084ff; border-radius: 50%; animation: spin 1s linear infinite; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-    </style>
+    label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 600;
+      color: #94a3b8;
+    }
+
+    textarea, select {
+      width: 100%;
+      padding: 12px;
+      border-radius: 8px;
+      border: 1px solid #334155;
+      background: #0f172a;
+      color: #fff;
+      font-size: 15px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    textarea {
+      resize: vertical;
+      min-height: 100px;
+    }
+
+    textarea:focus, select:focus {
+      border-color: #38bdf8;
+    }
+
+    .radio-group {
+      display: flex;
+      gap: 10px;
+    }
+
+    .radio-btn {
+      flex: 1;
+      text-align: center;
+      padding: 10px;
+      border: 1px solid #334155;
+      border-radius: 8px;
+      cursor: pointer;
+      background: #0f172a;
+      transition: all 0.2s;
+      font-size: 14px;
+    }
+
+    .radio-btn input {
+      display: none;
+    }
+
+    .radio-btn.active {
+      background: #0284c7;
+      border-color: #38bdf8;
+      color: #fff;
+      font-weight: bold;
+    }
+
+    button.btn-submit {
+      width: 100%;
+      padding: 14px;
+      background: linear-gradient(135deg, #0284c7, #2563eb);
+      border: none;
+      border-radius: 8px;
+      color: white;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+
+    button.btn-submit:hover {
+      opacity: 0.9;
+    }
+
+    button.btn-submit:disabled {
+      background: #475569;
+      cursor: not-allowed;
+    }
+
+    .result-box {
+      margin-top: 25px;
+      padding: 15px;
+      border-radius: 12px;
+      background: #0f172a;
+      text-align: center;
+      display: none;
+    }
+
+    .result-box img, .result-box video {
+      max-width: 100%;
+      border-radius: 8px;
+      margin-top: 10px;
+    }
+
+    .loader {
+      display: inline-block;
+      width: 24px;
+      height: 24px;
+      border: 3px solid rgba(255,255,255,.3);
+      border-radius: 50%;
+      border-top-color: #fff;
+      animation: spin 1s ease-in-out infinite;
+      vertical-align: middle;
+      margin-right: 8px;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+  </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <h1>AI Content Studio</h1>
-            <p>Генерация фото и видео по тексту</p>
-        </div>
 
-        <div class="input-group">
-            <span class="section-label">Режим генерации</span>
-            <div class="mode-selector">
-                <button class="mode-btn active" id="btn-photo">🖼️ Фото</button>
-                <button class="mode-btn" id="btn-video">🎬 Видео</button>
-            </div>
-        </div>
+<div class="container">
+  <h1>AI Content Studio</h1>
 
-        <div class="input-group">
-            <span class="section-label">Формат кадра</span>
-            <div class="ratio-selector">
-                <button class="ratio-btn active" onclick="setRatio('16:9')">16:9</button>
-                <button class="ratio-btn" onclick="setRatio('9:16')">9:16</button>
-                <button class="ratio-btn" onclick="setRatio('1:1')">1:1</button>
-                <button class="ratio-btn" onclick="setRatio('3:4')">3:4</button>
-            </div>
-        </div>
-
-        <div class="input-group">
-            <span class="section-label">Описание сцены</span>
-            <textarea id="prompt" placeholder="Опишите желаемый кадр..."></textarea>
-        </div>
-
-        <button class="btn-generate" id="generate-btn">Сгенерировать</button>
-
-        <div class="result-box">
-            <div id="placeholder" style="color:#666; font-size:14px;">Здесь появится результат</div>
-            <div class="loader" id="loader">
-                <div class="spinner"></div>
-                <span id="loader-text">Генерируем...</span>
-            </div>
-            <div id="content-container" style="width: 100%; display: flex; justify-content: center;"></div>
-        </div>
+  <div class="form-group">
+    <label>Режим генерации:</label>
+    <div class="radio-group" id="modeGroup">
+      <label class="radio-btn active">
+        <input type="radio" name="mode" value="photo" checked onchange="toggleVideoOptions()"> Фото (Flux)
+      </label>
+      <label class="radio-btn">
+        <input type="radio" name="mode" value="video" onchange="toggleVideoOptions()"> Видео (Runway Gen-4)
+      </label>
     </div>
+  </div>
 
-    <script>
-        try { vkBridge.send("VKWebAppInit"); } catch (e) {}
+  <div class="form-group">
+    <label for="prompt">Промпт (описание):</label>
+    <textarea id="prompt" placeholder="Опишите сцену на английском языке..."></textarea>
+  </div>
 
-        const BACKEND_URL = "https://photo-suit-backend.onrender.com";
-        let currentMode = "photo";
-        let currentRatio = "16:9";
+  <div class="form-group">
+    <label for="aspectRatio">Соотношение сторон:</label>
+    <select id="aspectRatio">
+      <option value="16:9">16:9 (Широкоформатное)</option>
+      <option value="9:16">9:16 (Вертикальное / Shorts / Reels)</option>
+      <option value="1:1">1:1 (Квадрат)</option>
+      <option value="4:3">4:3 (Стандарт)</option>
+    </select>
+  </div>
 
-        const btnPhoto = document.getElementById("btn-photo");
-        const btnVideo = document.getElementById("btn-video");
-        const generateBtn = document.getElementById("generate-btn");
-        const promptInput = document.getElementById("prompt");
-        const loader = document.getElementById("loader");
-        const loaderText = document.getElementById("loader-text");
-        const placeholder = document.getElementById("placeholder");
-        const container = document.getElementById("content-container");
+  <!-- Опция длительности (отображается только для видео) -->
+  <div class="form-group" id="durationGroup" style="display: none;">
+    <label>Длительность видео:</label>
+    <div class="radio-group">
+      <label class="radio-btn active" onclick="selectDuration(this)">
+        <input type="radio" name="duration" value="5" checked> 5 сек ($0.25)
+      </label>
+      <label class="radio-btn" onclick="selectDuration(this)">
+        <input type="radio" name="duration" value="10"> 10 сек ($0.50)
+      </label>
+    </div>
+  </div>
 
-        function setRatio(ratio) {
-            currentRatio = ratio;
-            document.querySelectorAll('.ratio-btn').forEach(btn => {
-                btn.classList.toggle('active', btn.innerText.includes(ratio));
-            });
+  <button class="btn-submit" id="generateBtn" onclick="generateContent()">Сгенерировать</button>
+
+  <div class="result-box" id="resultBox">
+    <div id="statusMessage"></div>
+    <div id="mediaContainer"></div>
+  </div>
+</div>
+
+<script>
+  // Укажи URL твоего FastAPI бэкенда на Render
+  const API_BASE_URL = "https://zzzlodeizlodeich81-coder.onrender.com"; 
+
+  // Переключение UI-классов для кнопок режима
+  document.querySelectorAll('#modeGroup .radio-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+      document.querySelectorAll('#modeGroup .radio-btn').forEach(b => b.classList.remove('active'));
+      this.classList.add('active');
+    });
+  });
+
+  function selectDuration(element) {
+    element.parentElement.querySelectorAll('.radio-btn').forEach(b => b.classList.remove('active'));
+    element.classList.add('active');
+  }
+
+  function toggleVideoOptions() {
+    const mode = document.querySelector('input[name="mode"]:checked').value;
+    const durationGroup = document.getElementById('durationGroup');
+    if (mode === 'video') {
+      durationGroup.style.display = 'block';
+    } else {
+      durationGroup.style.display = 'none';
+    }
+  }
+
+  async function generateContent() {
+    const prompt = document.getElementById('prompt').value.trim();
+    const mode = document.querySelector('input[name="mode"]:checked').value;
+    const aspectRatio = document.getElementById('aspectRatio').value;
+    const duration = parseInt(document.querySelector('input[name="duration"]:checked').value);
+
+    const generateBtn = document.getElementById('generateBtn');
+    const resultBox = document.getElementById('resultBox');
+    const statusMessage = document.getElementById('statusMessage');
+    const mediaContainer = document.getElementById('mediaContainer');
+
+    if (!prompt) {
+      alert("Пожалуйста, введите промпт!");
+      return;
+    }
+
+    generateBtn.disabled = true;
+    resultBox.style.display = 'block';
+    mediaContainer.innerHTML = '';
+    statusMessage.innerHTML = '<span class="loader"></span> Отправка запроса...';
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt: prompt,
+          mode: mode,
+          aspect_ratio: aspectRatio,
+          duration: duration
+        })
+      });
+
+      const data = await response.json();
+
+      if (data.status === 'error') {
+        throw new Error(data.error);
+      }
+
+      if (data.mode === 'photo') {
+        statusMessage.innerText = 'Готово!';
+        mediaContainer.innerHTML = `<img src="${data.output_url}" alt="Generated Image">`;
+        generateBtn.disabled = false;
+      } else if (data.mode === 'video') {
+        statusMessage.innerHTML = `<span class="loader"></span> Генерация видео (Runway Gen-4, ${duration} сек)... Это займет ~20-30 сек.`;
+        pollVideoStatus(data.prediction_id);
+      }
+
+    } catch (err) {
+      statusMessage.innerText = `Ошибка: ${err.message}`;
+      generateBtn.disabled = false;
+    }
+  }
+
+  async function pollVideoStatus(predictionId) {
+    const statusMessage = document.getElementById('statusMessage');
+    const mediaContainer = document.getElementById('mediaContainer');
+    const generateBtn = document.getElementById('generateBtn');
+
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch(`${API_BASE_URL}/api/status/${predictionId}`);
+        const data = await res.json();
+
+        if (data.status === 'success') {
+          clearInterval(interval);
+          statusMessage.innerText = 'Видео успешно сгенерировано!';
+          mediaContainer.innerHTML = `
+            <video controls autoplay loop>
+              <source src="${data.output_url}" type="video/mp4">
+              Ваш браузер не поддерживает видео.
+            </video>
+          `;
+          generateBtn.disabled = false;
+        } else if (data.status === 'error') {
+          clearInterval(interval);
+          statusMessage.innerText = `Ошибка генерации: ${data.error}`;
+          generateBtn.disabled = false;
         }
+      } catch (err) {
+        clearInterval(interval);
+        statusMessage.innerText = `Ошибка проверки статуса: ${err.message}`;
+        generateBtn.disabled = false;
+      }
+    }, 4000); // Проверяем статус каждые 4 секунды
+  }
+</script>
 
-        btnPhoto.addEventListener("click", () => {
-            currentMode = "photo";
-            btnPhoto.classList.add("active");
-            btnVideo.classList.remove("active");
-        });
-
-        btnVideo.addEventListener("click", () => {
-            currentMode = "video";
-            btnVideo.classList.add("active");
-            btnPhoto.classList.remove("active");
-        });
-
-        // Проверка статуса для видео
-        async function pollStatus(predictionId) {
-            const checkInterval = setInterval(async () => {
-                try {
-                    const res = await fetch(`${BACKEND_URL}/api/status/${predictionId}`);
-                    const data = await res.json();
-
-                    if (data.status === "success") {
-                        clearInterval(checkInterval);
-                        container.innerHTML = `
-                            <video controls autoplay loop style="width:100%;">
-                                <source src="${data.output_url}" type="video/mp4">
-                            </video>`;
-                        loader.style.display = "none";
-                        generateBtn.disabled = false;
-                    } else if (data.status === "error") {
-                        clearInterval(checkInterval);
-                        alert("Ошибка генерации: " + data.error);
-                        loader.style.display = "none";
-                        placeholder.style.display = "block";
-                        generateBtn.disabled = false;
-                    } else {
-                        loaderText.innerText = "Создаем видео какадром... Статус: " + (data.progress || "рендеринг");
-                    }
-                } catch (e) {
-                    console.error("Ошибка опроса статуса:", e);
-                }
-            }, 4000); // Опрос каждые 4 секунды
-        }
-
-        generateBtn.addEventListener("click", async () => {
-            const text = promptInput.value.trim();
-            if (!text) {
-                alert("Введите текст промпта!");
-                return;
-            }
-
-            generateBtn.disabled = true;
-            placeholder.style.display = "none";
-            container.innerHTML = "";
-            loader.style.display = "flex";
-            loaderText.innerText = "Инициализация...";
-
-            try {
-                const response = await fetch(`${BACKEND_URL}/api/generate`, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                        prompt: text,
-                        mode: currentMode,
-                        aspect_ratio: currentRatio
-                    })
-                });
-
-                const data = await response.json();
-
-                if (data.status === "success") {
-                    // Для фото
-                    container.innerHTML = `<img src="${data.output_url}" alt="Result">`;
-                    loader.style.display = "none";
-                    generateBtn.disabled = false;
-                } else if (data.status === "processing" && data.prediction_id) {
-                    // Для видео включаем опрос
-                    loaderText.innerText = "Видео поставлено в очередь Luma Ray...";
-                    pollStatus(data.prediction_id);
-                } else {
-                    alert("Ошибка: " + (data.error || "Неизвестная ошибка"));
-                    loader.style.display = "none";
-                    placeholder.style.display = "block";
-                    generateBtn.disabled = false;
-                }
-            } catch (err) {
-                alert("Ошибка сети при отправке.");
-                loader.style.display = "none";
-                placeholder.style.display = "block";
-                generateBtn.disabled = false;
-            }
-        });
-    </script>
 </body>
 </html>
