@@ -41,7 +41,6 @@
             <p>Генерация фото и видео по тексту</p>
         </div>
 
-        <!-- Выбор Режима -->
         <div class="input-group">
             <span class="section-label">Режим генерации</span>
             <div class="mode-selector">
@@ -50,18 +49,16 @@
             </div>
         </div>
 
-        <!-- Выбор Формата (Aspect Ratio) -->
         <div class="input-group">
             <span class="section-label">Формат кадра</span>
             <div class="ratio-selector">
-                <button class="ratio-btn active" onclick="setRatio('16:9')">16:9 (YouTube)</button>
-                <button class="ratio-btn" onclick="setRatio('9:16')">9:16 (Reels/VK)</button>
-                <button class="ratio-btn" onclick="setRatio('1:1')">1:1 (Квадрат)</button>
-                <button class="ratio-btn" onclick="setRatio('3:4')">3:4 (Портрет)</button>
+                <button class="ratio-btn active" onclick="setRatio('16:9')">16:9</button>
+                <button class="ratio-btn" onclick="setRatio('9:16')">9:16</button>
+                <button class="ratio-btn" onclick="setRatio('1:1')">1:1</button>
+                <button class="ratio-btn" onclick="setRatio('3:4')">3:4</button>
             </div>
         </div>
 
-        <!-- Промпт -->
         <div class="input-group">
             <span class="section-label">Описание сцены</span>
             <textarea id="prompt" placeholder="Опишите желаемый кадр..."></textarea>
@@ -114,6 +111,36 @@
             btnPhoto.classList.remove("active");
         });
 
+        // Проверка статуса для видео
+        async function pollStatus(predictionId) {
+            const checkInterval = setInterval(async () => {
+                try {
+                    const res = await fetch(`${BACKEND_URL}/api/status/${predictionId}`);
+                    const data = await res.json();
+
+                    if (data.status === "success") {
+                        clearInterval(checkInterval);
+                        container.innerHTML = `
+                            <video controls autoplay loop style="width:100%;">
+                                <source src="${data.output_url}" type="video/mp4">
+                            </video>`;
+                        loader.style.display = "none";
+                        generateBtn.disabled = false;
+                    } else if (data.status === "error") {
+                        clearInterval(checkInterval);
+                        alert("Ошибка генерации: " + data.error);
+                        loader.style.display = "none";
+                        placeholder.style.display = "block";
+                        generateBtn.disabled = false;
+                    } else {
+                        loaderText.innerText = "Создаем видео какадром... Статус: " + (data.progress || "рендеринг");
+                    }
+                } catch (e) {
+                    console.error("Ошибка опроса статуса:", e);
+                }
+            }, 4000); // Опрос каждые 4 секунды
+        }
+
         generateBtn.addEventListener("click", async () => {
             const text = promptInput.value.trim();
             if (!text) {
@@ -125,19 +152,12 @@
             placeholder.style.display = "none";
             container.innerHTML = "";
             loader.style.display = "flex";
-            
-            loaderText.innerText = currentMode === "video" 
-                ? "Генерация видео (~1-2 минуты)..." 
-                : "Генерируем фото...";
+            loaderText.innerText = "Инициализация...";
 
             try {
-                const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 180000);
-
                 const response = await fetch(`${BACKEND_URL}/api/generate`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    signal: controller.signal,
                     body: JSON.stringify({
                         prompt: text,
                         mode: currentMode,
@@ -145,27 +165,27 @@
                     })
                 });
 
-                clearTimeout(timeoutId);
                 const data = await response.json();
 
-                if (data.status === "success" && data.output_url) {
-                    if (currentMode === "photo") {
-                        container.innerHTML = `<img src="${data.output_url}" alt="Result">`;
-                    } else {
-                        container.innerHTML = `
-                            <video controls autoplay loop style="width:100%;">
-                                <source src="${data.output_url}" type="video/mp4">
-                            </video>`;
-                    }
+                if (data.status === "success") {
+                    // Для фото
+                    container.innerHTML = `<img src="${data.output_url}" alt="Result">`;
+                    loader.style.display = "none";
+                    generateBtn.disabled = false;
+                } else if (data.status === "processing" && data.prediction_id) {
+                    // Для видео включаем опрос
+                    loaderText.innerText = "Видео поставлено в очередь Luma Ray...";
+                    pollStatus(data.prediction_id);
                 } else {
-                    alert("Ошибка: " + (data.error || "Пустой ответ от сервера"));
+                    alert("Ошибка: " + (data.error || "Неизвестная ошибка"));
+                    loader.style.display = "none";
                     placeholder.style.display = "block";
+                    generateBtn.disabled = false;
                 }
             } catch (err) {
-                alert("Ошибка сети или таймаут генерации.");
-                placeholder.style.display = "block";
-            } finally {
+                alert("Ошибка сети при отправке.");
                 loader.style.display = "none";
+                placeholder.style.display = "block";
                 generateBtn.disabled = false;
             }
         });
