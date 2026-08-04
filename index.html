@@ -13,7 +13,7 @@
             color: #ffffff;
             margin: 0;
             padding: 15px;
-            padding-bottom: 70px; /* Отступ под баннер VK */
+            padding-bottom: 70px;
             box-sizing: border-box;
         }
 
@@ -157,6 +157,24 @@
             align-items: center;
             cursor: pointer;
         }
+
+        /* Плавающее уведомление вместо alert */
+        #toast-notification {
+            display: none;
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #2688eb;
+            color: #fff;
+            padding: 12px 20px;
+            border-radius: 10px;
+            font-size: 14px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            z-index: 9999;
+            text-align: center;
+            max-width: 90%;
+        }
     </style>
 </head>
 <body>
@@ -264,9 +282,23 @@
     </div>
 </div>
 
+<!-- Красивый тост вместо браузерных alert -->
+<div id="toast-notification"></div>
+
 <script>
     const BACKEND_URL = "https://photo-suit-backend.onrender.com";
     let vkUserId = null;
+
+    // Всплывающее уведомление в стиле VK
+    function showToast(message, isError = false) {
+        const toast = document.getElementById('toast-notification');
+        toast.style.background = isError ? '#e64a19' : '#2688eb';
+        toast.innerText = message;
+        toast.style.display = 'block';
+        setTimeout(() => {
+            toast.style.display = 'none';
+        }, 3500);
+    }
 
     // Безопасная инициализация VK Bridge и загрузка баннерной рекламы
     async function initVK() {
@@ -283,10 +315,10 @@
             vkUserId = String(user.id);
             refreshBalance();
 
-            // Автоматически показываем постоянный баннер рекламы внизу экрана
+            // Автоматически показываем постоянный баннер рекламы внизу экрана (работает преимущественно на моб. устройствах)
             vkBridge.send('VKWebAppShowBannerAd', {
                 banner_location: 'bottom'
-            }).catch(e => console.log("Баннер рекламы не доступен:", e));
+            }).catch(e => console.log("Баннер рекламы пока недоступен:", e));
 
         } catch (err) {
             console.error("Ошибка VK Bridge:", err);
@@ -332,35 +364,61 @@
     // Просмотр вознаграждаемой рекламы (+0.25 голоса)
     function watchAdReward() {
         if (typeof vkBridge === 'undefined') {
-            alert("Просмотр рекламы доступен только внутри ВКонтакте!");
+            showToast("Просмотр рекламы доступен только внутри приложения ВКонтакте!", true);
             return;
         }
 
-        vkBridge.send('VKWebAppShowNativeAds', { ad_format: 'reward' })
-            .then(async (data) => {
-                if (data.result) {
-                    // Реклама полностью просмотрена -> начисляем 0.25 голоса на бэкенд
-                    await fetch(`${BACKEND_URL}/api/add-reward-ad`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ user_id: vkUserId })
-                    });
-                    alert("Отлично! Вам начислено +0.25 голоса за просмотр рекламы.");
-                    refreshBalance();
+        // Проверяем доступность рекламы перед вызовом
+        vkBridge.send('VKWebAppCheckNativeAds', { ad_format: 'reward' })
+            .then((checkRes) => {
+                if (checkRes.result) {
+                    // Реклама доступна -> показываем
+                    vkBridge.send('VKWebAppShowNativeAds', { ad_format: 'reward' })
+                        .then(async (data) => {
+                            if (data.result) {
+                                await fetch(`${BACKEND_URL}/api/add-reward-ad`, {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ user_id: vkUserId })
+                                });
+                                showToast("Отлично! Начислено +0.25 голоса за просмотр рекламы.");
+                                refreshBalance();
+                            } else {
+                                showToast("Реклама не была досмотрена до конца.", true);
+                            }
+                        })
+                        .catch(err => {
+                            console.error(err);
+                            showToast("Ошибка при воспроизведении рекламы.", true);
+                        });
                 } else {
-                    alert("Реклама не была досмотрена до конца.");
+                    showToast("Сейчас нет доступных рекламных роликов (или вы смотрите с ПК). Попробуйте с телефона!", true);
                 }
             })
-            .catch(err => {
-                console.error("Ошибка рекламы:", err);
-                alert("Сейчас нет доступных рекламных роликов. Попробуйте позже.");
+            .catch(() => {
+                // Если метод check не сработал — пробуем напрямую
+                vkBridge.send('VKWebAppShowNativeAds', { ad_format: 'reward' })
+                    .then(async (data) => {
+                        if (data.result) {
+                            await fetch(`${BACKEND_URL}/api/add-reward-ad`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ user_id: vkUserId })
+                            });
+                            showToast("Отлично! Начислено +0.25 голоса.");
+                            refreshBalance();
+                        }
+                    })
+                    .catch(() => {
+                        showToast("Реклама сейчас недоступна. Попробуйте с мобильного приложения VK!", true);
+                    });
             });
     }
 
     // Покупка голосов через VK Pay / OrderBox
     function buyVotes(itemKey) {
         if (typeof vkBridge === 'undefined') {
-            alert("Покупка доступна только внутри ВКонтакте!");
+            showToast("Покупка доступна только внутри ВКонтакте!", true);
             return;
         }
 
@@ -371,6 +429,7 @@
             if (data.success) {
                 setTimeout(refreshBalance, 1500);
                 closeBuyModal();
+                showToast("Оплата прошла успешно!");
             }
         }).catch(err => console.error("Ошибка VK Pay:", err));
     }
@@ -391,7 +450,7 @@
     // Запуск генерации
     async function startGeneration() {
         if (!vkUserId) {
-            alert("Ошибка: не определён ID пользователя.");
+            showToast("Ошибка: не определён ID пользователя.", true);
             return;
         }
 
@@ -436,6 +495,7 @@
 
             if (data.status === 'error') {
                 statusText.innerText = "Ошибка: " + data.error;
+                showToast(data.error, true);
                 btn.disabled = false;
                 return;
             }
@@ -454,6 +514,7 @@
 
         } catch (e) {
             statusText.innerText = "Ошибка сервера: " + e.message;
+            showToast("Ошибка сервера: " + e.message, true);
             btn.disabled = false;
         }
     }
@@ -475,6 +536,7 @@
                 } else if (data.status === 'error') {
                     clearInterval(interval);
                     document.getElementById('status-text').innerText = "Ошибка генерации: " + data.error;
+                    showToast("Ошибка генерации: " + data.error, true);
                     document.getElementById('generate-btn').disabled = false;
                 }
             } catch (e) {
