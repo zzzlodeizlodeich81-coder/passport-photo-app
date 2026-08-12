@@ -57,16 +57,6 @@
             cursor: pointer;
         }
 
-        .ad-btn {
-            background: #e64a19;
-            color: #fff;
-            border: none;
-            padding: 8px 14px;
-            border-radius: 8px;
-            font-weight: 600;
-            cursor: pointer;
-        }
-
         /* Форма управления */
         .form-group {
             margin-bottom: 15px;
@@ -241,22 +231,11 @@
     </div>
 </div>
 
-<!-- Модальное окно покупки / получения кадров -->
+<!-- Модальное окно покупки кадров -->
 <div id="buy-modal" class="modal">
     <div class="modal-content">
-        <h3 style="margin-top:0;">Получить кадры</h3>
+        <h3 style="margin-top:0;">Пополнение баланса</h3>
         
-        <!-- Опция бесплатной рекламы -->
-        <div class="tariff-item" style="border: 1px solid #ff5722;" onclick="watchAdReward()">
-            <div>
-                <strong style="color: #ff5722;">Смотреть рекламу</strong>
-                <div style="font-size: 11px; color: #aaa;">+5 кадров за ролик</div>
-            </div>
-            <button class="ad-btn">Смотреть</button>
-        </div>
-
-        <hr style="border-color: #333; margin: 12px 0;">
-
         <div class="tariff-item" onclick="buyVotes('votes_2')">
             <span>40 кадров (1 фото) — 2 голоса</span>
             <button class="buy-btn">Купить</button>
@@ -312,11 +291,6 @@
             const user = await vkBridge.send('VKWebAppGetUserInfo');
             vkUserId = String(user.id);
             refreshBalance();
-
-            vkBridge.send('VKWebAppShowBannerAd', {
-                banner_location: 'bottom'
-            }).catch(e => console.log("Баннер рекламы пока недоступен:", e));
-
         } catch (err) {
             console.error("Ошибка VK Bridge:", err);
             vkUserId = "test_user_123";
@@ -354,56 +328,6 @@
                 }
             })
             .catch(err => console.error(err));
-    }
-
-    function watchAdReward() {
-        if (typeof vkBridge === 'undefined') {
-            showToast("Просмотр рекламы доступен только внутри приложения ВКонтакте!", true);
-            return;
-        }
-
-        vkBridge.send('VKWebAppCheckNativeAds', { ad_format: 'reward' })
-            .then((checkRes) => {
-                if (checkRes.result) {
-                    vkBridge.send('VKWebAppShowNativeAds', { ad_format: 'reward' })
-                        .then(async (data) => {
-                            if (data.result) {
-                                await fetch(`${BACKEND_URL}/api/add-reward-ad`, {
-                                    method: 'POST',
-                                    headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify({ user_id: vkUserId })
-                                });
-                                showToast("Отлично! Начислено +5 кадров за просмотр рекламы.");
-                                refreshBalance();
-                            } else {
-                                showToast("Реклама не была досмотрена до конца.", true);
-                            }
-                        })
-                        .catch(err => {
-                            console.error(err);
-                            showToast("Ошибка при воспроизведении рекламы.", true);
-                        });
-                } else {
-                    showToast("Сейчас нет доступных рекламных роликов (или вы смотрите с ПК). Попробуйте с телефона!", true);
-                }
-            })
-            .catch(() => {
-                vkBridge.send('VKWebAppShowNativeAds', { ad_format: 'reward' })
-                    .then(async (data) => {
-                        if (data.result) {
-                            await fetch(`${BACKEND_URL}/api/add-reward-ad`, {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ user_id: vkUserId })
-                            });
-                            showToast("Отлично! Начислено +5 кадров.");
-                            refreshBalance();
-                        }
-                    })
-                    .catch(() => {
-                        showToast("Реклама сейчас недоступна. Попробуйте с мобильного приложения VK!", true);
-                    });
-            });
     }
 
     function buyVotes(itemKey) {
