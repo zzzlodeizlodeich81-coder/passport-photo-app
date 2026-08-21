@@ -278,16 +278,18 @@
         }, 3500);
     }
 
-   async function initVK() {
+  async function initVK() {
     try {
-        // Пробуем достать viewer_id из параметров ссылки (их всегда передает ВК)
+        // 1. Сначала пробуем достать ID из параметров URL (самый надежный способ в VK Apps)
         const urlParams = new URLSearchParams(window.location.search);
-        let vk_user = urlParams.get('vk_viewer_id') || urlParams.get('viewer_id');
+        let vk_user = urlParams.get('vk_user_id') || urlParams.get('viewer_id') || urlParams.get('vk_viewer_id');
 
+        // 2. Если в URL пусто и доступен мост, инициализируем его
         if (!vk_user && typeof vkBridge !== 'undefined') {
-            // Если в урле нет, пробуем через init-параметры bridge
-            const initData = await vkBridge.send('VKWebAppGetInitData');
-            vk_user = initData.viewer_id;
+            await vkBridge.send('VKWebAppInit');
+            // Пробуем получить через GetUserInfo, раз параметры не прокинулись
+            const user = await vkBridge.send('VKWebAppGetUserInfo');
+            vk_user = user.id;
         }
 
         if (vk_user) {
@@ -295,9 +297,9 @@
             console.log("Успешно получен ID пользователя:", vkUserId);
             refreshBalance();
         } else {
-            // Запасной вариант через GetUserInfo, если параметры не поймались
-            const user = await vkBridge.send('VKWebAppGetUserInfo');
-            vkUserId = String(user.id);
+            // Если совсем ничего не нашлось — только тогда тестовый
+            console.warn("ID не найден, используется тестовый");
+            vkUserId = "test_user_123";
             refreshBalance();
         }
     } catch (err) {
@@ -306,7 +308,6 @@
         refreshBalance();
     }
 }
-
     document.addEventListener("DOMContentLoaded", initVK);
 
     function updatePriceDisplay() {
