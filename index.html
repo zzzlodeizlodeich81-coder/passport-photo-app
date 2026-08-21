@@ -286,55 +286,50 @@ async function initVK() {
 
         let vk_user = null;
 
-        // 1. Проверяем URL (для ПК и прямых заходов)
+        // 1. Пытаемся поймать ID из адресной строки (ПК, прямые ссылки)
         const urlParams = new URLSearchParams(window.location.search);
         vk_user = urlParams.get('vk_user_id') || urlParams.get('viewer_id') || urlParams.get('vk_viewer_id');
 
-        // 2. Если в URL пусто (типично для мобилок), спрашиваем у VK Bridge параметры запуска
+        // 2. Пытаемся получить параметры запуска через VK Bridge (стандарт для мобилок)
         if (!vk_user && typeof vkBridge !== 'undefined') {
             try {
                 const launchParams = await vkBridge.send('VKWebAppGetLaunchParams');
                 vk_user = launchParams.viewer_id || launchParams.vk_user_id;
             } catch (e) {
-                console.log("LaunchParams недоступны, пробуем GetUserInfo...");
+                console.log("LaunchParams не отдали ID, идем дальше...");
             }
         }
 
-        // 3. Если всё еще пусто — запрашиваем профиль напрямую
+        // 3. Запрашиваем профиль через VKWebAppGetUserInfo (основной способ для мобильных приложений ВК)
         if (!vk_user && typeof vkBridge !== 'undefined') {
-            const user = await vkBridge.send('VKWebAppGetUserInfo');
-            vk_user = user.id;
+            try {
+                const user = await vkBridge.send('VKWebAppGetUserInfo');
+                vk_user = user.id;
+            } catch (e) {
+                console.log("GetUserInfo заблокирован или отклонен");
+            }
         }
 
+        // 4. Финальный результат
         if (vk_user) {
             vkUserId = String(vk_user);
-            console.log("Успешно получен ID пользователя (мобилка/ПК):", vkUserId);
-            refreshBalance();
+            console.log("Успешно определен ID пользователя:", vkUserId);
+            refreshBalance(); // Подгрузит баланс именно этого юзера из таблицы
         } else {
-            console.warn("Не удалось определить ID, запрашиваем через принудительный таймаут...");
-            // Последняя попытка для особо упрямых мобильных клиентов
-            setTimeout(async () => {
-                try {
-                    const user = await vkBridge.send('VKWebAppGetUserInfo');
-                    if (user && user.id) {
-                        vkUserId = String(user.id);
-                        refreshBalance();
-                    }
-                } catch (err) {
-                    vkUserId = "test_user_123";
-                    refreshBalance();
-                }
-            }, 1000);
+            // Если это совсем старый браузер или странный клиент, где мост не алё
+            // Создаем уникальный временный ID на основе времени сессии, чтобы пользователи не смешивались
+            vkUserId = "guest_" + Date.now();
+            console.warn("Не удалось получить ID, создан гостевой профиль:", vkUserId);
+            refreshBalance();
         }
     } catch (err) {
         console.error("Ошибка инициализации VK:", err);
-        vkUserId = "test_user_123";
+        vkUserId = "guest_" + Date.now();
         refreshBalance();
     }
 }
 
 document.addEventListener("DOMContentLoaded", initVK);
-
     function updatePriceDisplay() {
         const mode = document.getElementById('mode-select').value;
         const durationGroup = document.getElementById('duration-group');
