@@ -309,12 +309,7 @@
         refreshBalance();
     }
 }
-    } catch (err) {
-        console.error("Ошибка инициализации VK:", err);
-        vkUserId = "test_user_123";
-        refreshBalance();
-    }
-}
+   
     document.addEventListener("DOMContentLoaded", initVK);
 
     function updatePriceDisplay() {
