@@ -280,14 +280,17 @@
 
   async function initVK() {
     try {
-        // 1. Сначала пробуем достать ID из параметров URL (самый надежный способ в VK Apps)
+        // 1. В первую очередь всегда дергаем официальный Init для VK Apps
+        if (typeof vkBridge !== 'undefined') {
+            await vkBridge.send('VKWebAppInit');
+        }
+
+        // 2. Достаем ID из параметров URL (тут уже есть ваш ID 499515546)
         const urlParams = new URLSearchParams(window.location.search);
         let vk_user = urlParams.get('vk_user_id') || urlParams.get('viewer_id') || urlParams.get('vk_viewer_id');
 
-        // 2. Если в URL пусто и доступен мост, инициализируем его
+        // 3. Если в URL пусто, пробуем через GetUserInfo
         if (!vk_user && typeof vkBridge !== 'undefined') {
-            await vkBridge.send('VKWebAppInit');
-            // Пробуем получить через GetUserInfo, раз параметры не прокинулись
             const user = await vkBridge.send('VKWebAppGetUserInfo');
             vk_user = user.id;
         }
@@ -297,11 +300,15 @@
             console.log("Успешно получен ID пользователя:", vkUserId);
             refreshBalance();
         } else {
-            // Если совсем ничего не нашлось — только тогда тестовый
-            console.warn("ID не найден, используется тестовый");
             vkUserId = "test_user_123";
             refreshBalance();
         }
+    } catch (err) {
+        console.error("Ошибка инициализации VK:", err);
+        vkUserId = "test_user_123";
+        refreshBalance();
+    }
+}
     } catch (err) {
         console.error("Ошибка инициализации VK:", err);
         vkUserId = "test_user_123";
