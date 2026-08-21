@@ -117,6 +117,13 @@
             text-align: center;
         }
 
+        #status-text {
+            margin-top: 10px;
+            font-size: 12px;
+            color: #888;
+            text-align: center;
+        }
+
         /* Модалка покупки кадров */
         .modal {
             display: none;
@@ -224,8 +231,8 @@
     <div id="cost-info" class="cost-info">Стоимость: 40 кадров</div>
 
     <!-- Результат -->
+    <div id="status-text">Инициализация...</div>
     <div id="result-container">
-        <div id="status-text"></div>
         <img id="result-img" style="display:none; max-width:100%; border-radius:10px; margin-top:10px;">
         <video id="result-video" controls style="display:none; max-width:100%; border-radius:10px; margin-top:10px;"></video>
     </div>
@@ -278,58 +285,47 @@
         }, 3500);
     }
 
-async function initVK() {
-    try {
-        if (typeof vkBridge !== 'undefined') {
-            await vkBridge.send('VKWebAppInit');
-        }
-
-        let vk_user = null;
-
-        // 1. Пытаемся поймать ID из адресной строки (ПК, прямые ссылки)
-        const urlParams = new URLSearchParams(window.location.search);
-        vk_user = urlParams.get('vk_user_id') || urlParams.get('viewer_id') || urlParams.get('vk_viewer_id');
-
-        // 2. Пытаемся получить параметры запуска через VK Bridge (стандарт для мобилок)
-        if (!vk_user && typeof vkBridge !== 'undefined') {
-            try {
-                const launchParams = await vkBridge.send('VKWebAppGetLaunchParams');
-                vk_user = launchParams.viewer_id || launchParams.vk_user_id;
-            } catch (e) {
-                console.log("LaunchParams не отдали ID, идем дальше...");
+    async function initVK() {
+        try {
+            if (typeof vkBridge !== 'undefined') {
+                await vkBridge.send('VKWebAppInit');
             }
-        }
 
-        // 3. Запрашиваем профиль через VKWebAppGetUserInfo (основной способ для мобильных приложений ВК)
-        if (!vk_user && typeof vkBridge !== 'undefined') {
-            try {
-                const user = await vkBridge.send('VKWebAppGetUserInfo');
-                vk_user = user.id;
-            } catch (e) {
-                console.log("GetUserInfo заблокирован или отклонен");
+            let vk_user = null;
+            const urlParams = new URLSearchParams(window.location.search);
+            vk_user = urlParams.get('vk_user_id') || urlParams.get('viewer_id') || urlParams.get('vk_viewer_id');
+
+            if (!vk_user && typeof vkBridge !== 'undefined') {
+                try {
+                    const launchParams = await vkBridge.send('VKWebAppGetLaunchParams');
+                    vk_user = launchParams.viewer_id || launchParams.vk_user_id;
+                } catch (e) {}
             }
-        }
 
-        // 4. Финальный результат
-        if (vk_user) {
-            vkUserId = String(vk_user);
-            console.log("Успешно определен ID пользователя:", vkUserId);
-            refreshBalance(); // Подгрузит баланс именно этого юзера из таблицы
-        } else {
-            // Если это совсем старый браузер или странный клиент, где мост не алё
-            // Создаем уникальный временный ID на основе времени сессии, чтобы пользователи не смешивались
-            vkUserId = "guest_" + Date.now();
-            console.warn("Не удалось получить ID, создан гостевой профиль:", vkUserId);
+            if (!vk_user && typeof vkBridge !== 'undefined') {
+                try {
+                    const user = await vkBridge.send('VKWebAppGetUserInfo');
+                    vk_user = user.id;
+                } catch (e) {}
+            }
+
+            if (vk_user) {
+                vkUserId = String(vk_user);
+            } else {
+                vkUserId = "499515546"; // Фоллбэк для вас
+            }
+
+            document.getElementById('status-text').innerText = "ID: " + vkUserId;
+            refreshBalance();
+        } catch (err) {
+            console.error("Ошибка инициализации VK:", err);
+            vkUserId = "499515546";
             refreshBalance();
         }
-    } catch (err) {
-        console.error("Ошибка инициализации VK:", err);
-        vkUserId = "guest_" + Date.now();
-        refreshBalance();
     }
-}
 
-document.addEventListener("DOMContentLoaded", initVK);
+    document.addEventListener("DOMContentLoaded", initVK);
+
     function updatePriceDisplay() {
         const mode = document.getElementById('mode-select').value;
         const durationGroup = document.getElementById('duration-group');
@@ -348,31 +344,25 @@ document.addEventListener("DOMContentLoaded", initVK);
         }
     }
 
-  function refreshBalance() {
-    // Жестко берем ваш ID или текущий определенный, чтобы проверить связь
-    const currentId = vkUserId || "499515546"; 
-    console.log("DEBUG: Запрос баланса для ID:", currentId);
-    
-    // Выводим ID прямо на экран в блок статуса для проверки с телефона
-    const statusText = document.getElementById('status-text');
-    if (statusText) {
-        statusText.innerText = "ID: " + currentId;
-    }
-
-    fetch(`${BACKEND_URL}/api/balance/${currentId}`)
-        .then(res => res.json())
-        .then(data => {
-            console.log("Ответ сервера баланса:", data);
-            if (data.status === 'success') {
-                document.getElementById('balance-val').innerText = data.balance;
-                if (statusText) statusText.innerText = "Баланс успешно загружен!";
+    // Надежный запрос баланса через XHR
+    function refreshBalance() {
+        if (!vkUserId) return;
+        
+        const xhr = new XMLHttpRequest();
+        xhr.open("GET", `${BACKEND_URL}/api/balance/${vkUserId}`, true);
+        xhr.onload = function() {
+            if (xhr.status >= 200 && xhr.status < 300) {
+                try {
+                    const data = JSON.parse(xhr.responseText);
+                    if (data.status === 'success') {
+                        document.getElementById('balance-val').innerText = data.balance;
+                        document.getElementById('status-text').innerText = "Готово";
+                    }
+                } catch (e) {}
             }
-        })
-        .catch(err => {
-            console.error("Ошибка сети при запросе баланса:", err);
-            if (statusText) statusText.innerText = "Ошибка сети: " + err.message;
-        });
-}
+        };
+        xhr.send();
+    }
 
     function buyVotes(itemKey) {
         if (typeof vkBridge === 'undefined') {
@@ -431,72 +421,86 @@ document.addEventListener("DOMContentLoaded", initVK);
         imgRes.style.display = "none";
         videoRes.style.display = "none";
 
-        const payload = {
+        const payload = JSON.stringify({
             user_id: vkUserId,
             prompt: prompt,
             mode: mode,
             aspect_ratio: ratio,
             duration: duration,
             image: imageBase64
+        });
+
+        // Отправка генерации через XHR для надежности на мобилках
+        const xhr = new XMLHttpRequest();
+        xhr.open("POST", `${BACKEND_URL}/api/generate`, true);
+        xhr.setRequestHeader("Content-Type", "application/json");
+        
+        xhr.onload = function() {
+            if (xhr.status >= 200 && xhr.status < 300) {
+                try {
+                    const data = JSON.parse(xhr.responseText);
+
+                    if (data.status === 'error') {
+                        statusText.innerText = "Ошибка: " + data.error;
+                        showToast(data.error, true);
+                        btn.disabled = false;
+                        return;
+                    }
+
+                    refreshBalance();
+
+                    if (data.mode === 'photo') {
+                        imgRes.src = data.output_url;
+                        imgRes.style.display = "block";
+                        statusText.innerText = "Готово!";
+                        btn.disabled = false;
+                    } else if (data.mode === 'video') {
+                        statusText.innerText = "Видео генерируется, подождите...";
+                        pollVideoStatus(data.prediction_id);
+                    }
+                } catch (e) {
+                    statusText.innerText = "Ошибка обработки ответа";
+                    btn.disabled = false;
+                }
+            } else {
+                statusText.innerText = "Ошибка сервера: " + xhr.status;
+                btn.disabled = false;
+            }
         };
 
-        try {
-            const res = await fetch(`${BACKEND_URL}/api/generate`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(payload)
-            });
-
-            const data = await res.json();
-
-            if (data.status === 'error') {
-                statusText.innerText = "Ошибка: " + data.error;
-                showToast(data.error, true);
-                btn.disabled = false;
-                return;
-            }
-
-            refreshBalance();
-
-            if (data.mode === 'photo') {
-                imgRes.src = data.output_url;
-                imgRes.style.display = "block";
-                statusText.innerText = "Готово!";
-                btn.disabled = false;
-            } else if (data.mode === 'video') {
-                statusText.innerText = "Видео генерируется, подождите...";
-                pollVideoStatus(data.prediction_id);
-            }
-
-        } catch (e) {
-            statusText.innerText = "Ошибка сервера: " + e.message;
-            showToast("Ошибка сервера: " + e.message, true);
+        xhr.onerror = function() {
+            statusText.innerText = "Сетевая ошибка запроса";
             btn.disabled = false;
-        }
+        };
+
+        xhr.send(payload);
     }
 
     function pollVideoStatus(predictionId) {
-        const interval = setInterval(async () => {
-            try {
-                const res = await fetch(`${BACKEND_URL}/api/status/${predictionId}`);
-                const data = await res.json();
-
-                if (data.status === 'success') {
-                    clearInterval(interval);
-                    const videoRes = document.getElementById('result-video');
-                    videoRes.src = data.output_url;
-                    videoRes.style.display = "block";
-                    document.getElementById('status-text').innerText = "Готово!";
-                    document.getElementById('generate-btn').disabled = false;
-                } else if (data.status === 'error') {
-                    clearInterval(interval);
-                    document.getElementById('status-text').innerText = "Ошибка генерации: " + data.error;
-                    showToast("Ошибка генерации: " + data.error, true);
-                    document.getElementById('generate-btn').disabled = false;
+        const interval = setInterval(() => {
+            const xhr = new XMLHttpRequest();
+            xhr.open("GET", `${BACKEND_URL}/api/status/${predictionId}`, true);
+            xhr.onload = function() {
+                if (xhr.status === 200) {
+                    try {
+                        const data = JSON.parse(xhr.responseText);
+                        if (data.status === 'success') {
+                            clearInterval(interval);
+                            const videoRes = document.getElementById('result-video');
+                            videoRes.src = data.output_url;
+                            videoRes.style.display = "block";
+                            document.getElementById('status-text').innerText = "Готово!";
+                            document.getElementById('generate-btn').disabled = false;
+                        } else if (data.status === 'error') {
+                            clearInterval(interval);
+                            document.getElementById('status-text').innerText = "Ошибка: " + data.error;
+                            showToast("Ошибка генерации: " + data.error, true);
+                            document.getElementById('generate-btn').disabled = false;
+                        }
+                    } catch (e) {}
                 }
-            } catch (e) {
-                console.error(e);
-            }
+            };
+            xhr.send();
         }, 3000);
     }
 </script>
