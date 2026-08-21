@@ -278,25 +278,34 @@
         }, 3500);
     }
 
-    async function initVK() {
-        if (typeof vkBridge === 'undefined') {
-            console.warn("VK Bridge не обнаружен.");
-            vkUserId = "test_user_123";
-            refreshBalance();
-            return;
+   async function initVK() {
+    try {
+        // Пробуем достать viewer_id из параметров ссылки (их всегда передает ВК)
+        const urlParams = new URLSearchParams(window.location.search);
+        let vk_user = urlParams.get('vk_viewer_id') || urlParams.get('viewer_id');
+
+        if (!vk_user && typeof vkBridge !== 'undefined') {
+            // Если в урле нет, пробуем через init-параметры bridge
+            const initData = await vkBridge.send('VKWebAppGetInitData');
+            vk_user = initData.viewer_id;
         }
 
-        try {
-            await vkBridge.send('VKWebAppInit');
+        if (vk_user) {
+            vkUserId = String(vk_user);
+            console.log("Успешно получен ID пользователя:", vkUserId);
+            refreshBalance();
+        } else {
+            // Запасной вариант через GetUserInfo, если параметры не поймались
             const user = await vkBridge.send('VKWebAppGetUserInfo');
             vkUserId = String(user.id);
             refreshBalance();
-        } catch (err) {
-            console.error("Ошибка VK Bridge:", err);
-            vkUserId = "test_user_123";
-            refreshBalance();
         }
+    } catch (err) {
+        console.error("Ошибка инициализации VK:", err);
+        vkUserId = "test_user_123";
+        refreshBalance();
     }
+}
 
     document.addEventListener("DOMContentLoaded", initVK);
 
