@@ -278,18 +278,29 @@
         }, 3500);
     }
 
-  async function initVK() {
+async function initVK() {
     try {
-        // 1. В первую очередь всегда дергаем официальный Init для VK Apps
         if (typeof vkBridge !== 'undefined') {
             await vkBridge.send('VKWebAppInit');
         }
 
-        // 2. Достаем ID из параметров URL (тут уже есть ваш ID 499515546)
-        const urlParams = new URLSearchParams(window.location.search);
-        let vk_user = urlParams.get('vk_user_id') || urlParams.get('viewer_id') || urlParams.get('vk_viewer_id');
+        let vk_user = null;
 
-        // 3. Если в URL пусто, пробуем через GetUserInfo
+        // 1. Проверяем URL (для ПК и прямых заходов)
+        const urlParams = new URLSearchParams(window.location.search);
+        vk_user = urlParams.get('vk_user_id') || urlParams.get('viewer_id') || urlParams.get('vk_viewer_id');
+
+        // 2. Если в URL пусто (типично для мобилок), спрашиваем у VK Bridge параметры запуска
+        if (!vk_user && typeof vkBridge !== 'undefined') {
+            try {
+                const launchParams = await vkBridge.send('VKWebAppGetLaunchParams');
+                vk_user = launchParams.viewer_id || launchParams.vk_user_id;
+            } catch (e) {
+                console.log("LaunchParams недоступны, пробуем GetUserInfo...");
+            }
+        }
+
+        // 3. Если всё еще пусто — запрашиваем профиль напрямую
         if (!vk_user && typeof vkBridge !== 'undefined') {
             const user = await vkBridge.send('VKWebAppGetUserInfo');
             vk_user = user.id;
@@ -297,11 +308,23 @@
 
         if (vk_user) {
             vkUserId = String(vk_user);
-            console.log("Успешно получен ID пользователя:", vkUserId);
+            console.log("Успешно получен ID пользователя (мобилка/ПК):", vkUserId);
             refreshBalance();
         } else {
-            vkUserId = "test_user_123";
-            refreshBalance();
+            console.warn("Не удалось определить ID, запрашиваем через принудительный таймаут...");
+            // Последняя попытка для особо упрямых мобильных клиентов
+            setTimeout(async () => {
+                try {
+                    const user = await vkBridge.send('VKWebAppGetUserInfo');
+                    if (user && user.id) {
+                        vkUserId = String(user.id);
+                        refreshBalance();
+                    }
+                } catch (err) {
+                    vkUserId = "test_user_123";
+                    refreshBalance();
+                }
+            }, 1000);
         }
     } catch (err) {
         console.error("Ошибка инициализации VK:", err);
@@ -309,8 +332,8 @@
         refreshBalance();
     }
 }
-   
-    document.addEventListener("DOMContentLoaded", initVK);
+
+document.addEventListener("DOMContentLoaded", initVK);
 
     function updatePriceDisplay() {
         const mode = document.getElementById('mode-select').value;
