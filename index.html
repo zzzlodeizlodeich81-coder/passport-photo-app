@@ -348,17 +348,31 @@ document.addEventListener("DOMContentLoaded", initVK);
         }
     }
 
-    function refreshBalance() {
-        if (!vkUserId) return;
-        fetch(`${BACKEND_URL}/api/balance/${vkUserId}`)
-            .then(res => res.json())
-            .then(data => {
-                if (data.status === 'success') {
-                    document.getElementById('balance-val').innerText = data.balance;
-                }
-            })
-            .catch(err => console.error(err));
+  function refreshBalance() {
+    // Жестко берем ваш ID или текущий определенный, чтобы проверить связь
+    const currentId = vkUserId || "499515546"; 
+    console.log("DEBUG: Запрос баланса для ID:", currentId);
+    
+    // Выводим ID прямо на экран в блок статуса для проверки с телефона
+    const statusText = document.getElementById('status-text');
+    if (statusText) {
+        statusText.innerText = "ID: " + currentId;
     }
+
+    fetch(`${BACKEND_URL}/api/balance/${currentId}`)
+        .then(res => res.json())
+        .then(data => {
+            console.log("Ответ сервера баланса:", data);
+            if (data.status === 'success') {
+                document.getElementById('balance-val').innerText = data.balance;
+                if (statusText) statusText.innerText = "Баланс успешно загружен!";
+            }
+        })
+        .catch(err => {
+            console.error("Ошибка сети при запросе баланса:", err);
+            if (statusText) statusText.innerText = "Ошибка сети: " + err.message;
+        });
+}
 
     function buyVotes(itemKey) {
         if (typeof vkBridge === 'undefined') {
